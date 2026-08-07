@@ -182,6 +182,6 @@ All other vars from the source doc's §10 (`RAZORPAY_*`, `MSG91_*`, `CLOUDINARY_
 - `npx prisma migrate dev` runs clean against a Neon DB from a fresh clone
 - `npx prisma db seed` creates the admin user and default settings
 - A phone number can request an OTP (visible in server console in dev), verify it, and land on `/admin` (if seeded ADMIN) or `/` (any other phone, auto-created as CUSTOMER)
-- Visiting `/admin` while logged out redirects to `/login`; visiting while logged in as CUSTOMER returns 403
+- Visiting `/admin` while logged out redirects to `/login`. Visiting `/admin` while logged in as CUSTOMER redirects to `/` (better UX for a page navigation than a bare JSON error); hitting `/api/admin/*` as CUSTOMER returns 403 JSON (correct for a programmatic caller)
 - `npx vitest run` passes for all Phase 1 tests
 - `git log` shows an initial commit with the full scaffold
