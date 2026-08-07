@@ -1,4 +1,10 @@
-import { SignJWT, jwtVerify } from 'jose';
+// Subpath imports, not the 'jose' barrel. This module is imported by
+// middleware.ts, which runs on the Edge runtime; the barrel pulls in JWE
+// decryption, whose deflate helper uses CompressionStream/DecompressionStream
+// and makes Next warn about unsupported Node APIs at build time. We only sign
+// and verify JWS, so these two subpaths are all we need.
+import { SignJWT } from 'jose/jwt/sign';
+import { jwtVerify } from 'jose/jwt/verify';
 import { cookies } from 'next/headers';
 
 export const SESSION_COOKIE_NAME = 'session';
