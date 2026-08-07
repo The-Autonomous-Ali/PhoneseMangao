@@ -1,6 +1,6 @@
 # Phase 1 — Foundation
 
-**Parent design:** [`grocery-ecommerce-system-design.md`](../../../../../Downloads/grocery-ecommerce-system-design.md) (source system design doc; see repo copy at `docs/reference/grocery-ecommerce-system-design.md` once copied in).
+**Parent design:** [`grocery-ecommerce-system-design.md`](../../reference/grocery-ecommerce-system-design.md) (source system design doc).
 
 **Status:** Approved for implementation planning.
 
