@@ -51,6 +51,12 @@ Move-Item "D:\apps\kadir_scaffold_tmp\.gitignore" "D:\apps\Kadir_website\.gitign
 Remove-Item "D:\apps\kadir_scaffold_tmp" -Recurse -Force
 ```
 
+The project already has a `.gitignore` with one line, `.worktrees/` (ignoring the git worktree directory used for isolated development). The move above replaces it with `create-next-app`'s generated version, which doesn't know about that line — re-add it:
+
+```powershell
+Add-Content -Path "D:\apps\Kadir_website\.gitignore" -Value "`n# Isolated dev worktrees`n.worktrees/"
+```
+
 - [ ] **Step 2: Verify the scaffold builds**
 
 Run: `cd D:\apps\Kadir_website; npm run build`
