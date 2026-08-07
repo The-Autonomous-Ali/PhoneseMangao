@@ -20,7 +20,15 @@ describe('signSession / verifySession', () => {
 
   it('rejects a tampered token', async () => {
     const token = await signSession({ userId: 'user_1', role: 'CUSTOMER' });
-    const tampered = token.slice(0, -1) + (token.endsWith('a') ? 'b' : 'a');
+    // Tamper the FIRST character of the signature, not the last. An HS256
+    // signature is 32 bytes -> 43 base64url chars, so the final char encodes
+    // only 4 significant bits and its low 2 bits are padding: swapping e.g.
+    // 'Y' (24) for 'a' (26) leaves the decoded bytes identical and the token
+    // still verifies. The first char's 6 bits are all significant.
+    const [header, payload, signature] = token.split('.');
+    const tamperedSignature =
+      (signature[0] === 'A' ? 'B' : 'A') + signature.slice(1);
+    const tampered = `${header}.${payload}.${tamperedSignature}`;
     await expect(verifySession(tampered)).resolves.toBeNull();
   });
 
