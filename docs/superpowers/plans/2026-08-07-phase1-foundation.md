@@ -41,11 +41,13 @@
 
 - [ ] **Step 1: Scaffold Next.js into a temp directory, then move it into the project root**
 
-The project root already has `.git/` and `docs/`, so scaffold into a sibling temp folder first rather than risk `create-next-app` refusing a non-empty directory:
+The project root already has `.git/` and `docs/`, so scaffold into a sibling temp folder first rather than risk `create-next-app` refusing a non-empty directory.
+
+Pin the major version explicitly — `@latest` can drift past a version either of us has working knowledge of (it did, mid-project: `@latest` resolved to Next.js 16.3.0, which Next.js's own generated `AGENTS.md` flags as having breaking changes from training-data-era Next.js). This plan is written for, and tested against, Next.js 15:
 
 ```powershell
 cd D:\apps
-npx create-next-app@latest kadir_scaffold_tmp --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --no-turbopack --use-npm --no-git
+npx --yes create-next-app@15 kadir_scaffold_tmp --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --no-turbopack --use-npm --no-git
 Move-Item "D:\apps\kadir_scaffold_tmp\*" "D:\apps\Kadir_website\" -Force
 Move-Item "D:\apps\kadir_scaffold_tmp\.gitignore" "D:\apps\Kadir_website\.gitignore" -Force
 Remove-Item "D:\apps\kadir_scaffold_tmp" -Recurse -Force
