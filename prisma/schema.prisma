@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Users & addresses ----------
+
+model User {
+  id        String    @id @default(cuid())
+  phone     String    @unique
+  name      String?
+  role      Role      @default(CUSTOMER)
+  addresses Address[]
+  orders    Order[]
+  createdAt DateTime  @default(now())
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+model Address {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
+  label     String?
+  line1     String
+  line2     String?
+  landmark  String?
+  city      String
+  pincode   String
+  isDefault Boolean @default(false)
+
+  @@index([userId])
+}
+
+// ---------- Catalog ----------
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  imageUrl  String?
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  products  Product[]
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id])
+  name        String
+  slug        String    @unique
+  description String?
+  imageUrl    String?
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  variants    Variant[]
+  createdAt   DateTime  @default(now())
+
+  @@index([categoryId, isActive])
+}
+
+model Variant {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  label       String
+  unitType    UnitType
+  unitValue   Decimal  @db.Decimal(10, 3)
+  price       Decimal  @db.Decimal(10, 2)
+  mrp         Decimal? @db.Decimal(10, 2)
+  stockQty    Int?
+  isAvailable Boolean  @default(true)
+  sku         String?  @unique
+
+  @@index([productId, isAvailable])
+}
+
+enum UnitType {
+  KG
+  GRAM
+  PIECE
+  BUNDLE
+  PACK
+  LITRE
+  ML
+}
+
+// ---------- Delivery ----------
+
+model ServicePincode {
+  id       String  @id @default(cuid())
+  pincode  String  @unique
+  area     String?
+  isActive Boolean @default(true)
+}
+
+model DeliverySlot {
+  id       String   @id @default(cuid())
+  date     DateTime @db.Date
+  slotType SlotType
+  capacity Int      @default(20)
+  booked   Int      @default(0)
+  cutoffAt DateTime
+  isOpen   Boolean  @default(true)
+  orders   Order[]
+
+  @@unique([date, slotType])
+  @@index([date, isOpen])
+}
+
+enum SlotType {
+  MORNING
+  AFTERNOON
+  EVENING
+}
+
+// ---------- Orders ----------
+
+model Order {
+  id          String   @id @default(cuid())
+  orderNumber String   @unique
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  deliveryAddress Json
+
+  slotId String
+  slot   DeliverySlot @relation(fields: [slotId], references: [id])
+
+  status        OrderStatus   @default(PENDING)
+  paymentMethod PaymentMethod
+  paymentStatus PaymentStatus @default(UNPAID)
+
+  itemsTotal  Decimal @db.Decimal(10, 2)
+  deliveryFee Decimal @db.Decimal(10, 2)
+  grandTotal  Decimal @db.Decimal(10, 2)
+
+  finalTotal Decimal? @db.Decimal(10, 2)
+
+  razorpayOrderId   String? @unique
+  razorpayPaymentId String?
+
+  customerNote String?
+  adminNote    String?
+  cancelReason String?
+
+  items       OrderItem[]
+  events      OrderEvent[]
+  placedAt    DateTime  @default(now())
+  deliveredAt DateTime?
+
+  @@index([userId, placedAt])
+  @@index([status, placedAt])
+  @@index([slotId])
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  order     Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId String
+
+  productName  String
+  variantLabel String
+  unitType     UnitType
+  unitPrice    Decimal @db.Decimal(10, 2)
+  quantity     Int
+  lineTotal    Decimal @db.Decimal(10, 2)
+
+  actualQuantity Decimal? @db.Decimal(10, 3)
+  adjustedTotal  Decimal? @db.Decimal(10, 2)
+
+  @@index([orderId])
+}
+
+model OrderEvent {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  note      String?
+  actorId   String?
+  createdAt DateTime    @default(now())
+
+  @@index([orderId])
+}
+
+enum OrderStatus {
+  PENDING_OTP
+  PENDING
+  CONFIRMED
+  PACKED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  FAILED
+}
+
+enum PaymentMethod {
+  ONLINE
+  COD
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+  FAILED
+}
+
+// ---------- Infrastructure ----------
+
+model OtpRequest {
+  id         String    @id @default(cuid())
+  phone      String
+  ip         String? // enables the per-IP rate limit the security checklist requires
+  codeHash   String
+  purpose    String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, createdAt])
+  @@index([ip, createdAt])
+}
+
+model Setting {
+  key   String @id
+  value Json
+}

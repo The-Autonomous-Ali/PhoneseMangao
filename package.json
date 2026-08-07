@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
+    "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -32,6 +33,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.23",
+    "prisma": "^6.19.3",
     "shadcn": "^4.16.2",
     "tailwindcss": "^4",
     "tsx": "^4.23.11",
