@@ -40,4 +40,15 @@ describe('parseEnv', () => {
   it('rejects an unknown SMS_DRIVER value', () => {
     expect(() => parseEnv({ ...valid, SMS_DRIVER: 'carrier-pigeon' })).toThrow(/SMS_DRIVER/);
   });
+
+  it('treats an empty-string SMS_DRIVER as absent', () => {
+    // A bare `SMS_DRIVER=` line in a copied .env, or a blank variable in the
+    // Vercel dashboard, arrives as '' rather than undefined. Failing there
+    // would be a trap, since .env.example ships the variable.
+    expect(parseEnv({ ...valid, SMS_DRIVER: '' }).SMS_DRIVER).toBe('console');
+  });
+
+  it('treats an empty-string NODE_ENV as absent', () => {
+    expect(parseEnv({ ...valid, NODE_ENV: '' }).NODE_ENV).toBe('development');
+  });
 });

@@ -37,11 +37,17 @@ export type Env = {
 };
 
 export function parseEnv(raw: NodeJS.ProcessEnv): Env {
+  // An empty string means "not configured", not "configured as ''". A bare
+  // `SMS_DRIVER=` line in a copied .env, or a blank variable in a hosting
+  // dashboard, arrives as '' — it must take the same path as an absent value
+  // rather than failing with `expected "console"`. DATABASE_URL and JWT_SECRET
+  // are deliberately left alone: they are required, so '' must still fail, and
+  // it fails with a clearer message as an empty string than as a missing key.
   const result = schema.safeParse({
-    NODE_ENV: raw.NODE_ENV,
+    NODE_ENV: raw.NODE_ENV || undefined,
     DATABASE_URL: raw.DATABASE_URL,
     JWT_SECRET: raw.JWT_SECRET,
-    SMS_DRIVER: raw.SMS_DRIVER,
+    SMS_DRIVER: raw.SMS_DRIVER || undefined,
   });
 
   if (!result.success) {
