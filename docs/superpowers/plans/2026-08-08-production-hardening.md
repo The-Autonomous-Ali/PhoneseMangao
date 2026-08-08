@@ -1268,15 +1268,33 @@ Expected: zero test failures; build exits 0.
 
 - [ ] **Step 2: Prove misconfiguration fails loudly**
 
+**Do not use `npm run build` for this check.** Measured during Task 1: `next build` does *not* execute the `instrumentation.ts` hook, so a build passes happily with invalid configuration. Boot validation only runs when a server starts. Verify against `next start`:
+
 ```powershell
 $env:JWT_SECRET = 'tooshort'
-npm run build
+$env:PORT = '3005'
+npm run start *> boot-check.log
 ```
 
-Expected: the build fails naming `JWT_SECRET`. Then restore it:
+Run it with `run_in_background`, give it ~15 seconds, then inspect:
 
 ```powershell
-Remove-Item Env:\JWT_SECRET
+Get-Content boot-check.log | Select-String 'JWT_SECRET'
+curl.exe -s -o NUL --max-time 20 -w "http_code=%{http_code}`n" http://localhost:3005/login
+```
+
+Expected: the log contains `An error occurred while loading instrumentation hook: Invalid environment configuration:` followed by a line naming `JWT_SECRET`, and the request returns **500**.
+
+Note the exact behaviour, confirmed in Task 1: the process keeps listening and serves 500 to every request rather than exiting. That still satisfies the requirement — the failure is total, immediate, and names its cause in the log — but do not expect the process to die, and do not "fix" it so that it does.
+
+Then stop it and restore the environment:
+
+```powershell
+Get-NetTCPConnection -LocalPort 3005 -State Listen -ErrorAction SilentlyContinue |
+  Select-Object -ExpandProperty OwningProcess -Unique |
+  ForEach-Object { Stop-Process -Id $_ -Force }
+Remove-Item Env:\JWT_SECRET, Env:\PORT -ErrorAction SilentlyContinue
+Remove-Item boot-check.log -ErrorAction SilentlyContinue
 ```
 
 - [ ] **Step 3: Start the dev server**
