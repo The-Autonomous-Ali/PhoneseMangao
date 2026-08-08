@@ -1,6 +1,7 @@
 import { randomInt } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { db } from './db';
+import { sendOtpSms } from './services/sms';
 
 export const OTP_EXPIRY_MINUTES = 5;
 export const MAX_OTP_ATTEMPTS = 3;
@@ -25,13 +26,7 @@ export function verifyOtpCode(code: string, hash: string): Promise<boolean> {
 }
 
 export async function sendOtp(phone: string, code: string): Promise<void> {
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`[dev otp] ${phone}: ${code}`);
-    return;
-  }
-  throw new Error(
-    'SMS provider not configured — MSG91/Fast2SMS integration lands in a later phase'
-  );
+  return sendOtpSms(phone, code);
 }
 
 export async function countRecentOtpRequestsByPhone(phone: string): Promise<number> {

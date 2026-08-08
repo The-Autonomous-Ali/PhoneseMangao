@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   generateOtpCode,
   hashOtpCode,
@@ -12,7 +12,10 @@ vi.mock('./db', () => ({
   db: { otpRequest: { count: vi.fn() } },
 }));
 
+vi.mock('./services/sms', () => ({ sendOtpSms: vi.fn() }));
+
 import { db } from './db';
+import { sendOtpSms } from './services/sms';
 
 describe('generateOtpCode', () => {
   it('produces a 6-digit numeric string', () => {
@@ -41,25 +44,9 @@ describe('hashOtpCode / verifyOtpCode', () => {
 });
 
 describe('sendOtp', () => {
-  const originalEnv = process.env.NODE_ENV;
-
-  afterEach(() => {
-    process.env.NODE_ENV = originalEnv;
-  });
-
-  it('logs the code to console outside production', async () => {
-    process.env.NODE_ENV = 'test';
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+  it('delegates to the configured SMS driver', async () => {
     await sendOtp('+919876543210', '123456');
-    expect(spy).toHaveBeenCalledWith(expect.stringContaining('123456'));
-    spy.mockRestore();
-  });
-
-  it('throws in production since no SMS provider is configured yet', async () => {
-    process.env.NODE_ENV = 'production';
-    await expect(sendOtp('+919876543210', '123456')).rejects.toThrow(
-      'SMS provider not configured'
-    );
+    expect(sendOtpSms).toHaveBeenCalledWith('+919876543210', '123456');
   });
 });
 
