@@ -77,4 +77,10 @@ describe('withDbRetry', () => {
     await expect(withDbRetry(op, noDelay)).rejects.toBeDefined();
     expect(op).toHaveBeenCalledTimes(1);
   });
+
+  it('does not retry P1017 through the wrapper, because the write may have landed', async () => {
+    const op = vi.fn().mockRejectedValue(knownError('P1017'));
+    await expect(withDbRetry(op, noDelay)).rejects.toBeDefined();
+    expect(op).toHaveBeenCalledTimes(1);
+  });
 });
