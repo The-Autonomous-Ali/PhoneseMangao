@@ -43,6 +43,8 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
     id: order.id,
     orderNumber: order.orderNumber,
     status: order.status,
+    paymentMethod: order.paymentMethod,
+    paymentStatus: order.paymentStatus,
     itemsTotal: order.itemsTotal.toFixed(2),
     deliveryFee: order.deliveryFee.toFixed(2),
     grandTotal: order.grandTotal.toFixed(2),

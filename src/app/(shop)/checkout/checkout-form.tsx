@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useCart } from '@/components/shop/cart-provider';
+import { openRazorpayCheckout } from '@/components/shop/razorpay-checkout';
 import { formatRupees, formatSlotDate, formatSlotType } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -117,14 +118,23 @@ export function CheckoutForm({
   addresses: initialAddresses,
   minOrderValue,
   shopOpen,
+  paymentsEnabled,
+  customerName,
+  customerPhone,
 }: {
   addresses: Address[];
   minOrderValue: string;
   shopOpen: boolean;
+  paymentsEnabled: boolean;
+  customerName: string | null;
+  customerPhone: string | null;
 }) {
   const router = useRouter();
   const { items, hydrated, clear } = useCart();
 
+  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'ONLINE'>(
+    paymentsEnabled ? 'ONLINE' : 'COD'
+  );
   const [addresses, setAddresses] = useState(initialAddresses);
   const [addressId, setAddressId] = useState(
     initialAddresses.find((a) => a.isDefault)?.id ?? initialAddresses[0]?.id ?? ''
@@ -178,14 +188,14 @@ export function CheckoutForm({
         items,
         addressId,
         slotId,
-        paymentMethod: 'COD',
+        paymentMethod,
         customerNote: note || undefined,
       }),
     });
     const body = await response.json().catch(() => ({}));
-    setPlacing(false);
 
     if (!response.ok) {
+      setPlacing(false);
       setError(body.error ?? 'Could not place your order');
       // The basket moved under them; re-quote so the page shows what changed.
       if (body.code === 'CART_CHANGED' || body.code === 'SLOT_FULL') router.refresh();
@@ -195,6 +205,25 @@ export function CheckoutForm({
     // Cleared only after the order exists. Clearing optimistically would lose
     // the basket if the request had failed.
     clear();
+
+    if (body.razorpayOrderId) {
+      try {
+        await openRazorpayCheckout({
+          razorpayKeyId: body.razorpayKeyId,
+          razorpayOrderId: body.razorpayOrderId,
+          orderNumber: body.orderNumber,
+          amountRupees: body.grandTotal,
+          customerName,
+          customerPhone,
+        });
+      } catch (widgetError) {
+        // The order exists either way. Sending them to it beats stranding them
+        // here — the order page shows what state the payment is in.
+        console.error('[checkout] payment widget failed', widgetError);
+      }
+    }
+
+    setPlacing(false);
     router.push(`/orders/${body.orderId}`);
   }
 
@@ -357,8 +386,40 @@ export function CheckoutForm({
             </p>
           )}
 
-          <div className="rounded-md bg-muted px-3 py-2 text-muted-foreground">
-            Paying cash on delivery. We will send a code on WhatsApp to confirm the order.
+          <div className="space-y-2 border-t pt-3">
+            <div className="font-medium">Payment</div>
+            {paymentsEnabled && (
+              <label className="flex cursor-pointer items-start gap-2">
+                <input
+                  type="radio"
+                  name="payment"
+                  className="mt-1"
+                  checked={paymentMethod === 'ONLINE'}
+                  onChange={() => setPaymentMethod('ONLINE')}
+                />
+                <span>
+                  Pay now
+                  <span className="block text-xs text-muted-foreground">
+                    UPI, card or netbanking
+                  </span>
+                </span>
+              </label>
+            )}
+            <label className="flex cursor-pointer items-start gap-2">
+              <input
+                type="radio"
+                name="payment"
+                className="mt-1"
+                checked={paymentMethod === 'COD'}
+                onChange={() => setPaymentMethod('COD')}
+              />
+              <span>
+                Cash on delivery
+                <span className="block text-xs text-muted-foreground">
+                  We send a code on WhatsApp to confirm
+                </span>
+              </span>
+            </label>
           </div>
 
           {error && (
@@ -368,7 +429,11 @@ export function CheckoutForm({
           )}
 
           <Button size="lg" className="w-full" disabled={!canPlace} onClick={placeOrder}>
-            {placing ? 'Placing order...' : 'Place order'}
+            {placing
+              ? 'Placing order...'
+              : paymentMethod === 'ONLINE'
+                ? `Pay ${formatRupees(quote?.grandTotal ?? '0.00')}`
+                : 'Place order'}
           </Button>
         </CardContent>
       </Card>

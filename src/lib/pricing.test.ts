@@ -7,6 +7,7 @@ const settings: ShopSettings = {
   minOrderValue: '199.00',
   freeDeliveryAbove: '500.00',
   shopOpen: true,
+  paymentsEnabled: false,
   whatsappNumber: '',
 };
 

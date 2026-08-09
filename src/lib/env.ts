@@ -54,6 +54,10 @@ const schema = z
     CLOUDINARY_API_KEY: z.string().optional(),
     CLOUDINARY_API_SECRET: z.string().optional(),
 
+    RAZORPAY_KEY_ID: z.string().optional(),
+    RAZORPAY_KEY_SECRET: z.string().optional(),
+    RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+
     // No trailing slash: the OAuth redirect URI is built by concatenating
     // `${APP_URL}/api/auth/google/callback`, and Google matches the registered
     // URI byte for byte, so a stray slash fails at the consent screen.
@@ -117,6 +121,26 @@ const schema = z
       }
     }
 
+    // Razorpay is switched on from Settings, not from the environment, so this
+    // cannot demand the keys outright. What it can catch is the dangerous
+    // half-state: keys present but no webhook secret means payments would be
+    // taken and never confirmed, because the webhook is the only thing that
+    // marks an order paid.
+    const razorpayKeys = [
+      value.RAZORPAY_KEY_ID,
+      value.RAZORPAY_KEY_SECRET,
+      value.RAZORPAY_WEBHOOK_SECRET,
+    ];
+    if (razorpayKeys.some(Boolean) && !razorpayKeys.every(Boolean)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['RAZORPAY_WEBHOOK_SECRET'],
+        message:
+          'RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET and RAZORPAY_WEBHOOK_SECRET must be set together. ' +
+          'Without the webhook secret, payments are taken and never confirmed.',
+      });
+    }
+
     if (value.SMS_DRIVER === 'whatsapp') {
       for (const key of WHATSAPP_REQUIRED_KEYS) {
         if (!value[key]) {
@@ -147,6 +171,9 @@ export type Env = {
   CLOUDINARY_CLOUD_NAME?: string;
   CLOUDINARY_API_KEY?: string;
   CLOUDINARY_API_SECRET?: string;
+  RAZORPAY_KEY_ID?: string;
+  RAZORPAY_KEY_SECRET?: string;
+  RAZORPAY_WEBHOOK_SECRET?: string;
   APP_URL?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
@@ -177,6 +204,9 @@ export function parseEnv(raw: NodeJS.ProcessEnv): Env {
     CLOUDINARY_CLOUD_NAME: blankToUndefined(raw.CLOUDINARY_CLOUD_NAME),
     CLOUDINARY_API_KEY: blankToUndefined(raw.CLOUDINARY_API_KEY),
     CLOUDINARY_API_SECRET: blankToUndefined(raw.CLOUDINARY_API_SECRET),
+    RAZORPAY_KEY_ID: blankToUndefined(raw.RAZORPAY_KEY_ID),
+    RAZORPAY_KEY_SECRET: blankToUndefined(raw.RAZORPAY_KEY_SECRET),
+    RAZORPAY_WEBHOOK_SECRET: blankToUndefined(raw.RAZORPAY_WEBHOOK_SECRET),
     APP_URL: blankToUndefined(raw.APP_URL),
     GOOGLE_CLIENT_ID: blankToUndefined(raw.GOOGLE_CLIENT_ID),
     GOOGLE_CLIENT_SECRET: blankToUndefined(raw.GOOGLE_CLIENT_SECRET),

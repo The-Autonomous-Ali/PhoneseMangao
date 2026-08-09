@@ -141,6 +141,32 @@ describe('parseEnv — production-only requirements', () => {
   });
 });
 
+describe('parseEnv — Razorpay', () => {
+  const keys = {
+    RAZORPAY_KEY_ID: 'rzp_test_abc',
+    RAZORPAY_KEY_SECRET: 'secret',
+    RAZORPAY_WEBHOOK_SECRET: 'webhook-secret',
+  };
+
+  it('accepts no Razorpay configuration at all, since payments are opt-in', () => {
+    expect(() => parseEnv(valid)).not.toThrow();
+  });
+
+  it('accepts a complete set of keys', () => {
+    expect(() => parseEnv({ ...valid, ...keys })).not.toThrow();
+  });
+
+  it.each(['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET'])(
+    'rejects a half-configured Razorpay missing %s',
+    (missing) => {
+      // Keys without a webhook secret is the dangerous state: payments are
+      // taken and never confirmed, because the webhook is the only thing that
+      // marks an order paid.
+      expect(() => parseEnv({ ...valid, ...keys, [missing]: undefined })).toThrow(/RAZORPAY/);
+    }
+  );
+});
+
 describe('parseEnv — image driver', () => {
   it('defaults to the local driver in development', () => {
     expect(parseEnv(valid).IMAGE_DRIVER).toBe('local');

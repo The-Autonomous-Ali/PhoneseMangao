@@ -60,3 +60,24 @@ describe('getShopSettings', () => {
     expect((await getShopSettings()).shopOpen).toBe(true);
   });
 });
+
+describe('getShopSettings — payments', () => {
+  it('keeps payments off by default', async () => {
+    // Defaulting this on would offer a payment method to a shop whose Razorpay
+    // KYC has not cleared, failing at the last step of checkout.
+    expect((await getShopSettings()).paymentsEnabled).toBe(false);
+  });
+
+  it('enables payments only on an explicit true', async () => {
+    vi.mocked(db.setting.findMany).mockResolvedValue(rows({ payments_enabled: true }) as never);
+    expect((await getShopSettings()).paymentsEnabled).toBe(true);
+  });
+
+  it.each([['yes'], [1], ['true'], [null]])(
+    'leaves payments off when payments_enabled holds %s',
+    async (value) => {
+      vi.mocked(db.setting.findMany).mockResolvedValue(rows({ payments_enabled: value }) as never);
+      expect((await getShopSettings()).paymentsEnabled).toBe(false);
+    }
+  );
+});

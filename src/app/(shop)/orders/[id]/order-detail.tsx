@@ -21,6 +21,8 @@ export interface OrderDetail {
   id: string;
   orderNumber: string;
   status: string;
+  paymentMethod: string;
+  paymentStatus: string;
   itemsTotal: string;
   deliveryFee: string;
   grandTotal: string;
@@ -147,6 +149,42 @@ export function OrderDetailView({ order }: { order: OrderDetail }) {
 
       {order.status === 'PENDING_OTP' && <ConfirmPanel orderId={order.id} />}
 
+      {order.paymentMethod === 'ONLINE' && order.paymentStatus === 'UNPAID' && (
+        <Card className="border-amber-300 bg-amber-50/50">
+          <CardHeader>
+            <CardTitle>Waiting for payment</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            {/* Deliberately not confirmed from the browser redirect: that
+                signal is forgeable, and a customer who closes the tab after
+                paying never sends it. The bank's confirmation is what counts. */}
+            <p>
+              If you completed the payment, this updates within a minute or two once the bank
+              confirms it. Refresh to check.
+            </p>
+            <Button type="button" variant="outline" size="sm" onClick={() => router.refresh()}>
+              Refresh
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {order.paymentMethod === 'ONLINE' && order.paymentStatus === 'FAILED' && (
+        <Card className="border-red-300 bg-red-50/50">
+          <CardHeader>
+            <CardTitle>Payment did not go through</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            Your delivery slot is held for a short while. Place the order again to retry, or
+            cancel below.
+          </CardContent>
+        </Card>
+      )}
+
+      {order.paymentStatus === 'PAID' && (
+        <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">Paid in full.</p>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Delivery</CardTitle>
@@ -199,7 +237,13 @@ export function OrderDetailView({ order }: { order: OrderDetail }) {
               </span>
             </div>
             <div className="flex justify-between pt-1 text-base font-semibold">
-              <span>Pay on delivery</span>
+              <span>
+                {order.paymentStatus === 'PAID'
+                  ? 'Paid'
+                  : order.paymentMethod === 'COD'
+                    ? 'Pay on delivery'
+                    : 'To pay'}
+              </span>
               <span className="tabular-nums">{formatRupees(order.grandTotal)}</span>
             </div>
           </div>

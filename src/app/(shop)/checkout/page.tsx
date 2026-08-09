@@ -51,6 +51,9 @@ export default async function CheckoutPage() {
         }))}
         minOrderValue={settings.minOrderValue}
         shopOpen={settings.shopOpen}
+        paymentsEnabled={settings.paymentsEnabled}
+        customerName={user.name}
+        customerPhone={user.phone}
       />
     </div>
   );

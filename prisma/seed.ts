@@ -7,6 +7,9 @@ const DEFAULT_SETTINGS: Array<{ key: string; value: Prisma.InputJsonValue }> = [
   { key: 'min_order_value', value: 199 },
   // Basket total at or above which delivery is free.
   { key: 'free_delivery_above', value: 500 },
+  // Off until Razorpay credentials are in place. Cash on delivery works
+  // regardless, so the shop can launch without waiting for KYC.
+  { key: 'payments_enabled', value: false },
   { key: 'whatsapp_number', value: '+910000000000' },
   { key: 'shop_open', value: true },
 ];

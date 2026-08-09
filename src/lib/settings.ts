@@ -17,6 +17,9 @@ export const SETTING_DEFAULTS = {
   min_order_value: '199.00',
   free_delivery_above: '500.00',
   shop_open: true,
+  // Opt-in, not opt-out. Defaulting this on would mean a shop whose Razorpay
+  // KYC has not cleared offers a payment method that errors at the last step.
+  payments_enabled: false,
   whatsapp_number: '',
 } as const;
 
@@ -28,6 +31,8 @@ export interface ShopSettings {
   /** Basket total at or above which delivery is free. */
   freeDeliveryAbove: string;
   shopOpen: boolean;
+  /** Whether online payment is offered. Cash on delivery is always available. */
+  paymentsEnabled: boolean;
   whatsappNumber: string;
 }
 
@@ -57,6 +62,10 @@ export async function getShopSettings(): Promise<ShopSettings> {
     // Anything other than an explicit `false` leaves the shop open. A typo in
     // the settings table should not silently close the business.
     shopOpen: byKey.get('shop_open') !== false,
+    // The opposite rule, for the opposite reason: only an explicit `true`
+    // enables payments, so a typo cannot offer a payment method that is not
+    // actually configured.
+    paymentsEnabled: byKey.get('payments_enabled') === true,
     whatsappNumber:
       typeof byKey.get('whatsapp_number') === 'string'
         ? (byKey.get('whatsapp_number') as string)

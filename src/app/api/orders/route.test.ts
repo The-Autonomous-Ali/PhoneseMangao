@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const tx = {
-  order: { create: vi.fn() },
+  order: { create: vi.fn(), update: vi.fn() },
+  orderEvent: { create: vi.fn() },
   otpRequest: { create: vi.fn() },
 };
 
@@ -10,7 +11,7 @@ vi.mock('@/lib/db', () => ({
   db: {
     user: { findUnique: vi.fn() },
     address: { findFirst: vi.fn() },
-    order: { findMany: vi.fn() },
+    order: { findMany: vi.fn(), update: vi.fn() },
     $transaction: vi.fn((fn: (client: typeof tx) => unknown) => fn(tx)),
   },
 }));
@@ -24,7 +25,7 @@ vi.mock('@/lib/cart-pricing', () => ({ priceCart: vi.fn() }));
 vi.mock('@/lib/settings', () => ({ getShopSettings: vi.fn() }));
 vi.mock('@/lib/slots', async () => {
   const actual = await vi.importActual<typeof import('@/lib/slots')>('@/lib/slots');
-  return { ...actual, bookSlot: vi.fn() };
+  return { ...actual, bookSlot: vi.fn(), releaseSlot: vi.fn() };
 });
 vi.mock('@/lib/serviceability', async () => {
   const actual =
@@ -36,12 +37,22 @@ vi.mock('@/lib/otp', async () => {
   return { ...actual, sendOtp: vi.fn(async () => {}) };
 });
 
+vi.mock('@/lib/razorpay', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/razorpay')>('@/lib/razorpay');
+  return {
+    ...actual,
+    createRazorpayOrder: vi.fn(),
+    getPublicKeyId: vi.fn(() => 'rzp_test_public'),
+  };
+});
+
 import { UnitType } from '@prisma/client';
 import { db } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { priceCart } from '@/lib/cart-pricing';
 import { getShopSettings } from '@/lib/settings';
-import { bookSlot, SlotFullError } from '@/lib/slots';
+import { bookSlot, releaseSlot, SlotFullError } from '@/lib/slots';
+import { createRazorpayOrder } from '@/lib/razorpay';
 import { isServiceable } from '@/lib/serviceability';
 import { sendOtp } from '@/lib/otp';
 import { POST as placeOrder } from './route';
@@ -51,6 +62,7 @@ const SETTINGS = {
   minOrderValue: '199.00',
   freeDeliveryAbove: '500.00',
   shopOpen: true,
+  paymentsEnabled: true,
   whatsappNumber: '',
 };
 
@@ -123,6 +135,9 @@ beforeEach(() => {
     status: 'PENDING_OTP',
   });
   tx.otpRequest.create.mockReset().mockResolvedValue({});
+  tx.order.update.mockReset().mockResolvedValue({});
+  tx.orderEvent.create.mockReset().mockResolvedValue({});
+  vi.mocked(db.order.update).mockReset().mockResolvedValue({} as never);
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 
@@ -200,14 +215,15 @@ describe('POST /api/orders — refusals before any slot is claimed', () => {
     await expect(response.json()).resolves.toMatchObject({ code: 'BELOW_MINIMUM' });
   });
 
-  it('rejects an online payment method until Razorpay exists', async () => {
-    // Accepting it now would create orders nobody can pay for, which the
-    // expire-unpaid sweep would then cancel.
-    const response = await placeOrder(
-      buildRequest({ ...VALID_BODY, paymentMethod: 'ONLINE' })
-    );
+  it('refuses online payment when the shop has it switched off', async () => {
+    // Offering it would mean a payment method that errors at the last step for
+    // a shop whose Razorpay KYC has not cleared.
+    vi.mocked(getShopSettings).mockResolvedValue({ ...SETTINGS, paymentsEnabled: false });
+
+    const response = await placeOrder(buildRequest({ ...VALID_BODY, paymentMethod: 'ONLINE' }));
 
     expect(response.status).toBe(400);
+    expect(bookSlot).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -338,5 +354,84 @@ describe('POST /api/orders — placing the order', () => {
     const response = await placeOrder(buildRequest(VALID_BODY));
 
     expect(response.status).toBe(201);
+  });
+});
+
+describe('POST /api/orders — online payment', () => {
+  const ONLINE_BODY = { ...VALID_BODY, paymentMethod: 'ONLINE' };
+
+  beforeEach(() => {
+    vi.mocked(createRazorpayOrder)
+      .mockReset()
+      .mockResolvedValue({ id: 'rzp_order_1', amount: 28000, currency: 'INR' });
+    vi.mocked(releaseSlot).mockReset().mockResolvedValue(undefined);
+    tx.order.create.mockResolvedValue({
+      id: 'order_1',
+      orderNumber: 'PM260809-ABCD',
+      status: 'PENDING',
+      slotId: 'slot_1',
+    });
+  });
+
+  it('opens the order as PENDING, since money confirms it rather than a code', async () => {
+    await placeOrder(buildRequest(ONLINE_BODY));
+
+    const { data } = tx.order.create.mock.calls[0][0];
+    expect(data.status).toBe('PENDING');
+    expect(data.paymentMethod).toBe('ONLINE');
+    expect(data.paymentStatus).toBe('UNPAID');
+  });
+
+  it('sends no confirmation code for an online order', async () => {
+    await placeOrder(buildRequest(ONLINE_BODY));
+
+    expect(tx.otpRequest.create).not.toHaveBeenCalled();
+    expect(sendOtp).not.toHaveBeenCalled();
+  });
+
+  it('bills Razorpay our own total, keyed to our order number', async () => {
+    await placeOrder(buildRequest(ONLINE_BODY));
+
+    expect(createRazorpayOrder).toHaveBeenCalledWith({
+      amountRupees: '280.00',
+      receipt: 'PM260809-ABCD',
+      notes: { orderId: 'order_1' },
+    });
+  });
+
+  it('returns what the payment widget needs', async () => {
+    const response = await placeOrder(buildRequest(ONLINE_BODY));
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({
+      orderId: 'order_1',
+      razorpayOrderId: 'rzp_order_1',
+      razorpayKeyId: 'rzp_test_public',
+    });
+  });
+
+  it('stores the razorpay order id, which the webhook looks the order up by', async () => {
+    await placeOrder(buildRequest(ONLINE_BODY));
+
+    expect(db.order.update).toHaveBeenCalledWith({
+      where: { id: 'order_1' },
+      data: { razorpayOrderId: 'rzp_order_1' },
+    });
+  });
+
+  it('gives the slot back when the payment could not be started', async () => {
+    // Otherwise an order nobody can ever pay for sits on a delivery place
+    // until the sweep notices it.
+    vi.mocked(createRazorpayOrder).mockRejectedValue(new Error('Razorpay down'));
+
+    const response = await placeOrder(buildRequest(ONLINE_BODY));
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toMatchObject({ code: 'PAYMENT_START_FAILED' });
+    expect(releaseSlot).toHaveBeenCalledWith('slot_1', tx);
+    expect(tx.order.update).toHaveBeenCalledWith({
+      where: { id: 'order_1' },
+      data: expect.objectContaining({ status: 'FAILED' }),
+    });
   });
 });
