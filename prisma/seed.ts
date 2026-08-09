@@ -82,6 +82,28 @@ const SAMPLE_CATALOG = [
   },
 ];
 
+/**
+ * Delivery area. Without at least one row the storefront's PIN code gate locks
+ * everybody out, including the developer, so this is not optional sample data.
+ * The shop owner replaces these from the admin before launch.
+ */
+const SAMPLE_PINCODES = [
+  { pincode: '400069', area: 'Andheri East' },
+  { pincode: '400053', area: 'Andheri West' },
+  { pincode: '400058', area: 'Versova' },
+];
+
+async function seedPincodes(): Promise<void> {
+  for (const entry of SAMPLE_PINCODES) {
+    await prisma.servicePincode.upsert({
+      where: { pincode: entry.pincode },
+      update: {},
+      create: entry,
+    });
+  }
+  console.log(`Seeded ${SAMPLE_PINCODES.length} serviceable pincodes`);
+}
+
 async function seedCatalog(): Promise<void> {
   let productCount = 0;
 
@@ -138,6 +160,7 @@ async function main() {
   }
   console.log(`Seeded ${DEFAULT_SETTINGS.length} settings`);
 
+  await seedPincodes();
   await seedCatalog();
 }
 
