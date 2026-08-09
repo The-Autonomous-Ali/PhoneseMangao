@@ -45,10 +45,14 @@ export async function POST(request: NextRequest) {
     data: { consumedAt: new Date() },
   });
 
+  // Completing an OTP sent to this number *is* proof the caller holds it, so
+  // the number is marked verified here. Without this, someone who signs in by
+  // phone is sent to /verify-phone at checkout and asked to confirm the very
+  // number they just used to log in.
   const user = await db.user.upsert({
     where: { phone },
-    update: {},
-    create: { phone },
+    update: { phoneVerifiedAt: new Date() },
+    create: { phone, phoneVerifiedAt: new Date() },
   });
 
   const token = await signSession({ userId: user.id, role: user.role });

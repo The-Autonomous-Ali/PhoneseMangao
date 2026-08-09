@@ -5,6 +5,8 @@ const prisma = new PrismaClient();
 const DEFAULT_SETTINGS: Array<{ key: string; value: Prisma.InputJsonValue }> = [
   { key: 'delivery_fee', value: 30 },
   { key: 'min_order_value', value: 199 },
+  // Basket total at or above which delivery is free.
+  { key: 'free_delivery_above', value: 500 },
   { key: 'whatsapp_number', value: '+910000000000' },
   { key: 'shop_open', value: true },
 ];

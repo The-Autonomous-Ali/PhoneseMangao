@@ -17,8 +17,8 @@ const ORIGINAL = { ...process.env };
 const SECRET = 'cron-secret-at-least-16';
 
 const STALE_ORDERS = [
-  { id: 'order_1', slotId: 'slot_a' },
-  { id: 'order_2', slotId: 'slot_b' },
+  { id: 'order_1', slotId: 'slot_a', paymentMethod: 'ONLINE' },
+  { id: 'order_2', slotId: 'slot_b', paymentMethod: 'ONLINE' },
 ];
 
 const tx = {
@@ -78,27 +78,48 @@ describe('POST /api/cron/expire-unpaid — authorization', () => {
 });
 
 describe('POST /api/cron/expire-unpaid — sweep', () => {
-  it('only looks at online orders that are still unpaid and past the timeout', async () => {
+  /** The two independent arms of the sweep, by payment method. */
+  function sweepArms() {
+    const { where } = tx.order.findMany.mock.calls[0][0];
+    return {
+      online: where.OR.find((arm: { paymentMethod: string }) => arm.paymentMethod === 'ONLINE'),
+      cod: where.OR.find((arm: { paymentMethod: string }) => arm.paymentMethod === 'COD'),
+    };
+  }
+
+  it('sweeps online orders on payment status, past the payment window', async () => {
     runJob();
 
     await expireUnpaid(authorized());
 
-    const { where } = tx.order.findMany.mock.calls[0][0];
-    expect(where).toMatchObject({
-      paymentMethod: 'ONLINE',
+    const { online } = sweepArms();
+    expect(online).toMatchObject({
       paymentStatus: 'UNPAID',
       status: { in: ['PENDING_OTP', 'PENDING'] },
     });
-    expect(where.placedAt.lt).toBeInstanceOf(Date);
-    expect(where.placedAt.lt.getTime()).toBeLessThan(Date.now());
+    expect(online.placedAt.lt.getTime()).toBeLessThan(Date.now());
   });
 
-  it('never sweeps COD orders, which are unpaid until the driver arrives', async () => {
+  it('sweeps COD orders on confirmation, never on payment status', async () => {
+    // A COD order is unpaid until the driver is at the door. Sweeping those on
+    // payment status would cancel every genuine cash order the shop has.
     runJob();
 
     await expireUnpaid(authorized());
 
-    expect(tx.order.findMany.mock.calls[0][0].where.paymentMethod).toBe('ONLINE');
+    const { cod } = sweepArms();
+    expect(cod.status).toBe('PENDING_OTP');
+    expect(cod).not.toHaveProperty('paymentStatus');
+    expect(cod.placedAt.lt.getTime()).toBeLessThan(Date.now());
+  });
+
+  it('gives COD a shorter window, since nothing external is being waited on', async () => {
+    runJob();
+
+    await expireUnpaid(authorized());
+
+    const { online, cod } = sweepArms();
+    expect(cod.placedAt.lt.getTime()).toBeGreaterThan(online.placedAt.lt.getTime());
   });
 
   it('cancels each stale order with a reason', async () => {
@@ -110,6 +131,17 @@ describe('POST /api/cron/expire-unpaid — sweep', () => {
     expect(tx.order.update).toHaveBeenCalledWith({
       where: { id: 'order_1' },
       data: { status: 'CANCELLED', cancelReason: expect.stringContaining('30 minutes') },
+    });
+  });
+
+  it('tells a COD customer what they did not do, not which sweep caught them', async () => {
+    runJob([{ id: 'order_3', slotId: 'slot_c', paymentMethod: 'COD' }]);
+
+    await expireUnpaid(authorized());
+
+    expect(tx.order.update).toHaveBeenCalledWith({
+      where: { id: 'order_3' },
+      data: { status: 'CANCELLED', cancelReason: expect.stringContaining('confirmed') },
     });
   });
 

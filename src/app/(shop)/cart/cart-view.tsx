@@ -8,6 +8,7 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { useCart } from '@/components/shop/cart-provider';
 import { usePincode } from '@/components/shop/pincode-provider';
 import { formatRupees } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 interface PricedLine {
   variantId: string;
@@ -30,6 +31,12 @@ interface ValidatedCart {
   items: PricedLine[];
   issues: Issue[];
   itemsTotal: string;
+  deliveryFee: string;
+  grandTotal: string;
+  deliveryWaived: boolean;
+  meetsMinimum: boolean;
+  shortfall: string;
+  shopOpen: boolean;
 }
 
 export function CartView() {
@@ -166,21 +173,49 @@ export function CartView() {
         ))}
       </ul>
 
-      <div className="flex items-center justify-between rounded-xl border p-4">
-        <div>
-          <div className="text-sm text-muted-foreground">Items total</div>
-          <div className="text-xl font-semibold tabular-nums">
-            {formatRupees(priced?.itemsTotal ?? '0.00')}
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            Delivery charge is added at checkout{pincode ? ` for ${pincode}` : ''}.
-          </div>
+      <div className="space-y-3 rounded-xl border p-4">
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Items</span>
+          <span className="tabular-nums">{formatRupees(priced?.itemsTotal ?? '0.00')}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">
+            Delivery{pincode ? ` to ${pincode}` : ''}
+          </span>
+          <span className="tabular-nums">
+            {priced?.deliveryWaived ? 'Free' : formatRupees(priced?.deliveryFee ?? '0.00')}
+          </span>
+        </div>
+        <div className="flex justify-between border-t pt-3 text-lg font-semibold">
+          <span>Total</span>
+          <span className="tabular-nums">{formatRupees(priced?.grandTotal ?? '0.00')}</span>
         </div>
 
-        {/* Checkout is Phase 4. Saying so beats a button that goes nowhere. */}
-        <Button size="lg" disabled title="Checkout opens soon">
+        {priced && !priced.meetsMinimum && (
+          <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Add {formatRupees(priced.shortfall)} more to reach the minimum order.
+          </p>
+        )}
+
+        {priced && !priced.shopOpen && (
+          <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            The shop is closed right now.
+          </p>
+        )}
+
+        {/* Disabled rather than hidden, so the reason is visible. The same two
+            rules are enforced again in POST /api/orders — a disabled button is
+            not a constraint. */}
+        <Link
+          href="/checkout"
+          aria-disabled={!priced?.meetsMinimum || !priced?.shopOpen}
+          className={cn(
+            buttonVariants({ size: 'lg', className: 'w-full' }),
+            (!priced?.meetsMinimum || !priced?.shopOpen) && 'pointer-events-none opacity-50'
+          )}
+        >
           Checkout
-        </Button>
+        </Link>
       </div>
     </div>
   );

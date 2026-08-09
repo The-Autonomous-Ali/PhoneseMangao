@@ -60,6 +60,29 @@ describe('POST /api/auth/otp/verify', () => {
     expect(cookieStore.set.mock.calls[0][0]).toBe('session');
   });
 
+  it('marks the number verified, since the code proves the caller holds it', async () => {
+    // Otherwise someone who signs in by phone is sent to /verify-phone at
+    // checkout and asked to confirm the number they just logged in with.
+    const codeHash = await hashOtpCode('123456');
+    vi.mocked(db.otpRequest.findFirst).mockResolvedValue({
+      id: 'otp_1',
+      phone: PHONE,
+      codeHash,
+      attempts: 0,
+      expiresAt: new Date(Date.now() + 60_000),
+      consumedAt: null,
+    } as never);
+    vi.mocked(db.user.upsert).mockResolvedValue({ id: 'u1', phone: PHONE, role: 'CUSTOMER' } as never);
+
+    await verifyOtp(buildRequest({ phone: PHONE, code: '123456' }));
+
+    expect(db.user.upsert).toHaveBeenCalledWith({
+      where: { phone: PHONE },
+      update: { phoneVerifiedAt: expect.any(Date) },
+      create: { phone: PHONE, phoneVerifiedAt: expect.any(Date) },
+    });
+  });
+
   it('rejects an incorrect code with 400 and increments attempts', async () => {
     const codeHash = await hashOtpCode('123456');
     vi.mocked(db.otpRequest.findFirst).mockResolvedValue({

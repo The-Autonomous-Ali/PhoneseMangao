@@ -19,6 +19,10 @@ export function SiteHeader() {
 
         <div className="flex-1" />
 
+        <Link href="/orders" className="rounded-md px-2 py-1 text-sm hover:bg-muted">
+          Orders
+        </Link>
+
         {/* Both of these read localStorage, so both wait for hydration. The
             reserved width keeps the header from jumping when they appear. */}
         {pincodeHydrated && pincode && (

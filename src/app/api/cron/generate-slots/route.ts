@@ -24,15 +24,32 @@ const CUTOFF_HOURS_IST: Record<SlotType, number> = {
 // is not necessarily — a container runs UTC unless told otherwise — so the
 // offset is applied explicitly rather than trusting the host clock's zone.
 const IST_OFFSET_MINUTES = 5 * 60 + 30;
+const IST_OFFSET_MS = IST_OFFSET_MINUTES * 60 * 1000;
 
-/** Midnight IST on `date`, as the UTC instant Postgres will store. */
-function istMidnightUtc(date: Date): Date {
-  const utcMidnight = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-  return new Date(utcMidnight - IST_OFFSET_MINUTES * 60 * 1000);
+/**
+ * The delivery date, `offset` days after today in India.
+ *
+ * Returned as UTC midnight of that calendar day, which is what a Postgres
+ * `date` column means: a day on a calendar, not an instant. Storing the *IST
+ * midnight instant* here instead — 18:30 UTC the evening before — makes
+ * Postgres truncate to the previous day, and every delivery is then filed
+ * against the wrong date.
+ */
+function deliveryDate(now: Date, offset: number): Date {
+  // Shifting by the offset makes the UTC getters read as IST wall-clock, which
+  // is how we ask "what is today's date in India?" without a timezone library.
+  const ist = new Date(now.getTime() + IST_OFFSET_MS);
+  return new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate() + offset));
 }
 
-function addDays(date: Date, days: number): Date {
-  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+/**
+ * When ordering closes, as a real instant.
+ *
+ * Unlike the date above this is a moment in time, so it is anchored to the
+ * actual IST midnight — 18:30 UTC the previous evening — and offset from there.
+ */
+function cutoffInstant(date: Date, hoursFromIstMidnight: number): Date {
+  return new Date(date.getTime() - IST_OFFSET_MS + hoursFromIstMidnight * 60 * 60 * 1000);
 }
 
 /**
@@ -47,17 +64,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
   }
 
-  const today = new Date();
+  const now = new Date();
   const rows: Prisma.DeliverySlotCreateManyInput[] = [];
 
   for (let offset = 0; offset < DAYS_AHEAD; offset++) {
-    const date = istMidnightUtc(addDays(today, offset));
+    const date = deliveryDate(now, offset);
     for (const slotType of Object.values(SlotType)) {
       rows.push({
         date,
         slotType,
         capacity: SLOT_CAPACITY,
-        cutoffAt: new Date(date.getTime() + CUTOFF_HOURS_IST[slotType] * 60 * 60 * 1000),
+        cutoffAt: cutoffInstant(date, CUTOFF_HOURS_IST[slotType]),
       });
     }
   }

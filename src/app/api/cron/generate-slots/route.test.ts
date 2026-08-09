@@ -85,6 +85,37 @@ describe('POST /api/cron/generate-slots', () => {
     expect(createMany.mock.calls[0][0]).toMatchObject({ skipDuplicates: true });
   });
 
+  it('files each slot against a calendar day, not an instant', async () => {
+    // A Postgres `date` column means a day on a calendar. Storing the IST
+    // midnight instant — 18:30 UTC the evening before — makes Postgres truncate
+    // to the previous day, filing every delivery against the wrong date.
+    const createMany = captureCreateMany();
+
+    await generateSlots(authorized());
+
+    const { data } = createMany.mock.calls[0][0] as CreateManyArgs;
+    for (const row of data) {
+      expect(row.date.getUTCHours()).toBe(0);
+      expect(row.date.getUTCMinutes()).toBe(0);
+    }
+  });
+
+  it('starts from today in India, not from the server’s timezone', async () => {
+    const createMany = captureCreateMany();
+
+    await generateSlots(authorized());
+
+    const { data } = createMany.mock.calls[0][0] as CreateManyArgs;
+    const istToday = new Date(Date.now() + (5 * 60 + 30) * 60 * 1000);
+    const expected = Date.UTC(
+      istToday.getUTCFullYear(),
+      istToday.getUTCMonth(),
+      istToday.getUTCDate()
+    );
+    const earliest = Math.min(...data.map((row) => row.date.getTime()));
+    expect(earliest).toBe(expected);
+  });
+
   it('closes the morning slot the evening before, since it is packed overnight', async () => {
     const createMany = captureCreateMany();
 
