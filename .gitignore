@@ -43,3 +43,10 @@ next-env.d.ts
 
 # Isolated dev worktrees
 .worktrees/
+
+# Images written by the "local" IMAGE_DRIVER. Development scratch only —
+# production uploads go to Cloudinary.
+/public/uploads/
+
+# Database dumps written by deploy/backup.sh
+/backups/

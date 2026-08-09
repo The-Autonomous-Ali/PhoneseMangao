@@ -1,0 +1,22 @@
+# Everything here would either be rebuilt anyway or must never reach an image.
+node_modules
+.next
+.git
+.env
+.env.local
+.env.*.local
+
+# Secrets and local state
+*.pem
+*.log
+
+# Not part of the runtime
+.superpowers
+docs
+README.md
+CHANGES.md
+*.md
+!prisma/**/*.md
+.vscode
+.idea
+tsconfig.tsbuildinfo

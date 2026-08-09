@@ -1,0 +1,21 @@
+# PhoneseMangao scheduled jobs.
+# Install with:  crontab /opt/phonesemangao/deploy/crontab
+#
+# The app's own advisory locks make every one of these safe to double-fire, so
+# a manual run or an overlapping slow run cannot corrupt anything.
+
+# Cron uses the host timezone unless told otherwise, and a container host is
+# usually UTC. Every time below is meant as IST.
+CRON_TZ=Asia/Kolkata
+APP_DIR=/opt/phonesemangao
+SHELL=/bin/sh
+
+# Tomorrow's delivery slots, before anyone is awake to order.
+30 0 * * * $APP_DIR/deploy/cron-job.sh generate-slots
+
+# Return delivery places held by online orders that were never paid for.
+*/15 * * * * $APP_DIR/deploy/cron-job.sh expire-unpaid
+
+# Nightly backup, offsite. The Oracle free tier has no SLA: an instance can be
+# reclaimed, and without this that is the end of the business's records.
+15 2 * * * $APP_DIR/deploy/backup.sh

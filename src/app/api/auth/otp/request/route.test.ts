@@ -57,4 +57,19 @@ describe('POST /api/auth/otp/request', () => {
     const response = await requestOtp(buildRequest({ phone: '+919876543210' }));
     expect(response.status).toBe(429);
   });
+
+  it('returns 502 when the code could not be delivered', async () => {
+    // Distinct from a 500 on purpose: the client turns this one into the shop's
+    // phone number rather than a generic retry, so a WhatsApp outage does not
+    // leave a customer on a dead screen with no way to order.
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(sendOtp).mockRejectedValueOnce(new Error('WhatsApp send failed with status 401'));
+
+    const response = await requestOtp(buildRequest({ phone: '+919876543210' }));
+
+    expect(response.status).toBe(502);
+    // The request row is written before the send, so the code stays usable if
+    // delivery recovers and they retry.
+    expect(db.otpRequest.create).toHaveBeenCalledTimes(1);
+  });
 });

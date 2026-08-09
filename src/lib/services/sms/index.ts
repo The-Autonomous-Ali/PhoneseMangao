@@ -1,5 +1,6 @@
 import { getEnv } from '@/lib/env';
 import { consoleDriver } from './console';
+import { whatsappDriver } from './whatsapp';
 import type { SmsDriver } from './types';
 
 export type { SmsDriver } from './types';
@@ -16,6 +17,8 @@ export function getSmsDriver(): SmsDriver {
         );
       }
       return consoleDriver;
+    case 'whatsapp':
+      return whatsappDriver;
   }
 }
 

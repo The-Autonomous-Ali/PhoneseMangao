@@ -10,13 +10,30 @@ datasource db {
 // ---------- Users & addresses ----------
 
 model User {
-  id        String    @id @default(cuid())
-  phone     String    @unique
-  name      String?
+  id String @id @default(cuid())
+
+  // Both identifiers are optional because either one can be the first to
+  // arrive. Google sign-in creates a row with an email and no phone; the phone
+  // is filled in at first checkout. The legacy OTP path still creates a row
+  // with a phone and no email. Exactly one row per person either way — the
+  // phone-verify handler merges when a Google row meets an existing phone row.
+  phone    String? @unique
+  email    String? @unique
+  googleId String? @unique
+  name     String?
+  imageUrl String?
+
+  // Set only once a WhatsApp OTP has been confirmed for `phone`. Checkout reads
+  // this rather than `phone != null`, so an unverified number can never be used
+  // for a delivery the driver has to call about.
+  phoneVerifiedAt DateTime?
+
   role      Role      @default(CUSTOMER)
   addresses Address[]
   orders    Order[]
   createdAt DateTime  @default(now())
+
+  @@index([email])
 }
 
 enum Role {
@@ -223,6 +240,9 @@ model OtpRequest {
   phone      String
   ip         String? // enables the per-IP rate limit the security checklist requires
   codeHash   String
+  // 'LOGIN' | 'PHONE_VERIFY' | 'COD_CONFIRM' — see OtpPurpose in src/lib/otp.ts,
+  // which is the authority. Kept as a String so adding a purpose needs no
+  // migration.
   purpose    String
   expiresAt  DateTime
   attempts   Int       @default(0)
