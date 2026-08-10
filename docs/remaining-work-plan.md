@@ -1,6 +1,6 @@
 # Remaining work
 
-**Updated:** 2026-08-10 · **Branch:** `phase1.5-hardening` @ `63deb5f` · 454 tests green
+**Updated:** 2026-08-10 · **Branch:** `phase1.5-hardening` @ `9a41722` · 503 tests green
 
 Phases 1–5 are done and pushed. A customer can browse, fill a basket, check out,
 and pay — cash with an OTP confirmation, or online once payments are switched
@@ -18,22 +18,29 @@ This is the screen the owner lives in daily. The design doc calls out two
 things it must get right: the picking list ("he will ask for this on day one")
 and the ability to advance an order's status in one action.
 
+**6A (6.1–6.4) is done**, specced in
+`docs/superpowers/specs/2026-08-10-admin-order-operations-design.md` and built
+across `d13cc97..45789a5`. What remains below is 6B (6.5–6.7) and 6C (6.8–6.9).
+
 | # | Piece | Done when |
 |---|---|---|
-| 6.1 | **Admin orders list** | Filter by date, slot and status; each row expands to items, address and phone |
-| 6.2 | **Status transitions** | One action advances PENDING → CONFIRMED → PACKED → OUT_FOR_DELIVERY → DELIVERED, each writing an OrderEvent |
-| 6.3 | **Picking list** | Print-friendly page grouped by slot, showing product, size and quantity — what the packer carries |
-| 6.4 | **Weight settlement** | At "mark delivered", enter `actualQuantity` per KG line; computes `adjustedTotal` and writes `finalTotal` |
+| ~~6.1~~ | ~~**Admin orders list**~~ | **Done.** Filters live in the URL so a view can be sent as a link |
+| ~~6.2~~ | ~~**Status transitions**~~ | **Done.** Forward one step, no undo; conditional writes guard two open tabs |
+| ~~6.3~~ | ~~**Picking list**~~ | **Done.** Stock totals, then a slip per order, each on a fresh sheet |
+| ~~6.4~~ | ~~**Weight settlement**~~ | **Done.** Needed a new `OrderItem.unitValue` column — see below |
 | 6.5 | **`/admin/slots`** | Week view: set capacity, close one slot, block a whole date for a holiday |
 | 6.6 | **`/admin/pincodes`** | Add and remove serviceable pincodes — currently a database edit |
 | 6.7 | **`/admin/settings`** | Delivery fee, minimum order, free-delivery threshold, WhatsApp number, shop-closed switch, `payments_enabled` |
 | 6.8 | **Telegram alerts** | Owner gets a message when an order reaches CONFIRMED |
 | 6.9 | **Dashboard** | Today's orders by slot, revenue, low stock — replaces the stub |
 
-Biggest of the nine is 6.4: settlement touches money on a delivered order, and
-§4.6 is explicit that partial-refund automation for small discrepancies is not
-worth building. Cash orders settle by the driver collecting `finalTotal`;
-online orders absorb the difference unless it is material.
+6.4 turned out to need a schema change. `OrderItem` denormalised `unitPrice`
+but not `unitValue`, so a "5 kg" bag at ₹160 stored `160.00 × 1` and ₹32/kg was
+unrecoverable — and `variantId` carries no relation, so Variant could not be
+asked. The column now exists and is written at checkout. Cash orders settle by
+the driver collecting `finalTotal`; online orders absorb the difference, per
+§4.6. The delivery fee is never recomputed at settlement: a basket that earned
+free delivery keeps it even when adjusted weights fall below the threshold.
 
 6.5 and 6.6 are small and unblock real operation — the shop currently has slots
 only because cron generates them at a fixed capacity of 20, and three seeded
@@ -59,8 +66,10 @@ Recorded in `.superpowers/sdd/2026-08-08-production-hardening/progress.md`.
 - **Task 7** — admin phone from config. `prisma/seed.ts` still carries
   `TODO: replace with the real admin phone number before go-live` and a
   hardcoded `+911234567890`
-- **Task 8** — **CI workflow.** The highest-value item here: five phases now
-  sit on one branch, and `tsc --noEmit` has already been red once undetected
+- **Task 8** — **CI workflow.** The highest-value item here: six phases now
+  sit on one branch, and `tsc --noEmit` has already been red once undetected —
+  it went red again during 6A while the suite stayed green. The order-number
+  test that failed ~11% of runs is fixed (`9a41722`), so CI would start honest
 - **Task 9** — client details checklist
 - **Task 10** — end-to-end verification pass
 
@@ -107,8 +116,12 @@ mobile audit.
 - Local `.env` holds a placeholder `CRON_SECRET` and fake Razorpay keys, added
   so the cron and webhook routes could be exercised. Inert while
   `payments_enabled` is false. **Replace before enabling payments.**
-- The dev database has test orders, a "Home" address on the seeded admin, and
-  one variant left at `stockQty: 48`. Clear before any demo.
+- The dev database's six test orders were deleted when `OrderItem.unitValue`
+  was added, and the slot counters reset with them. A "Home" address on the
+  seeded admin and one variant at `stockQty: 48` remain.
+- **Phase 6A has had no live end-to-end run.** It is covered by tests, `tsc`,
+  lint and a production build, but no real order has been walked from placed to
+  settled against the database. Do that before trusting it in front of the owner.
 - `grocery-ecommerce-system-design.md` in the repo root is an untracked
   duplicate of `docs/reference/`. Delete it or commit it.
 - `GET /api/categories`, `/api/products` and `/api/products/:slug` from the
