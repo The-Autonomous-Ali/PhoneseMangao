@@ -19,6 +19,12 @@ export const addressSchema = z.object({
   landmark: optionalLine(120),
   city: trimmed(60).min(1, 'City is required'),
   pincode: z.string().trim().regex(PINCODE_PATTERN, 'Enter a valid 6-digit PIN code'),
+  // Where the customer dropped their pin. Optional because a listed pincode is
+  // serviceable without one, and because addresses saved before the map
+  // existed have none — requiring it would lock those customers out of editing
+  // their own address.
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
   isDefault: z.boolean().default(false),
 });
 

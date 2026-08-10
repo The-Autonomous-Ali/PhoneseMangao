@@ -11,7 +11,7 @@ import { calculateTotals } from '@/lib/pricing';
 import { bookSlot, releaseSlot, SlotFullError } from '@/lib/slots';
 import { createRazorpayOrder, getPublicKeyId } from '@/lib/razorpay';
 import { generateOrderNumber } from '@/lib/order-number';
-import { isServiceable } from '@/lib/serviceability';
+import { isServiceable, serviceabilityMessage } from '@/lib/serviceability';
 import {
   generateOtpCode,
   hashOtpCode,
@@ -101,10 +101,14 @@ export async function POST(request: NextRequest) {
 
   // Re-checked at order time, not just when the address was saved: the shop can
   // drop a pincode from its delivery area between those two moments.
-  const { serviceable } = await isServiceable({ pincode: address.pincode });
-  if (!serviceable) {
+  const check = await isServiceable({
+    pincode: address.pincode,
+    lat: address.lat ?? undefined,
+    lng: address.lng ?? undefined,
+  });
+  if (!check.serviceable) {
     return NextResponse.json(
-      { error: `We no longer deliver to ${address.pincode}.`, code: 'NOT_SERVICEABLE' },
+      { error: serviceabilityMessage(check, address.pincode), code: 'NOT_SERVICEABLE' },
       { status: 400 }
     );
   }

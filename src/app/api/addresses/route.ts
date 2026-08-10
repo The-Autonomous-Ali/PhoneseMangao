@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { withDbRetry } from '@/lib/db-retry';
 import { getSession } from '@/lib/auth';
 import { addressSchema } from '@/lib/validation/address';
-import { isServiceable } from '@/lib/serviceability';
+import { isServiceable, serviceabilityMessage } from '@/lib/serviceability';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,11 +39,12 @@ export async function POST(request: NextRequest) {
   // Checked at save time as well as at checkout. Letting somebody store an
   // address the shop cannot reach only to reject it at the last step wastes
   // their typing and reads as a bug.
-  const { serviceable } = await isServiceable({ pincode: input.pincode });
-  if (!serviceable) {
+  const check = await isServiceable({ pincode: input.pincode, lat: input.lat, lng: input.lng });
+  if (!check.serviceable) {
     return NextResponse.json(
       {
-        error: `We do not deliver to ${input.pincode} yet.`,
+        error: serviceabilityMessage(check, input.pincode),
+        code: check.reason,
         fieldErrors: { pincode: ['Outside our delivery area'] },
       },
       { status: 400 }
@@ -75,6 +76,8 @@ export async function POST(request: NextRequest) {
           landmark: input.landmark,
           city: input.city,
           pincode: input.pincode,
+          lat: input.lat,
+          lng: input.lng,
           isDefault,
         },
       });

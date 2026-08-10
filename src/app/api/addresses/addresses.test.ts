@@ -48,7 +48,7 @@ const params = (id: string) => ({ params: Promise.resolve({ id }) });
 
 beforeEach(() => {
   vi.mocked(getSession).mockResolvedValue({ userId: 'user_1', role: 'CUSTOMER' });
-  vi.mocked(isServiceable).mockResolvedValue({ serviceable: true });
+  vi.mocked(isServiceable).mockResolvedValue({ serviceable: true, reason: 'PINCODE_LISTED' });
   vi.mocked(db.address.findMany).mockReset().mockResolvedValue([] as never);
   vi.mocked(db.address.findFirst).mockReset().mockResolvedValue(null as never);
   vi.mocked(db.$transaction).mockClear();
@@ -118,7 +118,7 @@ describe('addresses — creation', () => {
   it('rejects an address outside the delivery area', async () => {
     // Caught at save time as well as at checkout, so nobody types an address
     // that is only rejected at the last step.
-    vi.mocked(isServiceable).mockResolvedValue({ serviceable: false });
+    vi.mocked(isServiceable).mockResolvedValue({ serviceable: false, reason: 'NOT_SERVICEABLE' });
 
     const response = await createAddress(buildRequest({ ...VALID, pincode: '999999' }));
 

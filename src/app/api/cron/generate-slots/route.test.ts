@@ -23,6 +23,9 @@ function settings(slotCapacity: number) {
     paymentsEnabled: false,
     whatsappNumber: '',
     slotCapacity,
+    shopLat: null,
+    shopLng: null,
+    deliveryRadiusKm: 5,
   };
 }
 

@@ -25,6 +25,13 @@ export const SETTING_DEFAULTS = {
   // What the cron gives each newly generated slot. Editable so a bigger van
   // does not mean re-editing twenty-one rows a week, forever.
   slot_capacity: 20,
+  // Where the shop is, and how far it will drive. Empty until the owner sets
+  // it: an unset location leaves serviceability on the pincode list, which is
+  // how the shop keeps taking orders rather than refusing everyone the moment
+  // radius delivery ships.
+  shop_lat: '',
+  shop_lng: '',
+  delivery_radius_km: 5,
 } as const;
 
 export type SettingKey = keyof typeof SETTING_DEFAULTS;
@@ -40,6 +47,11 @@ export interface ShopSettings {
   whatsappNumber: string;
   /** Orders one van can carry in a window. Applied to newly generated slots. */
   slotCapacity: number;
+  /** Null until the owner sets it, which keeps serviceability on the pincode list. */
+  shopLat: number | null;
+  shopLng: number | null;
+  /** How far the shop will drive, in kilometres. */
+  deliveryRadiusKm: number;
 }
 
 // Settings arrive as JSON, so a number written from the admin and a string
@@ -66,6 +78,31 @@ function readCount(raw: unknown, fallback: number): number {
   return parsed.success ? parsed.data : fallback;
 }
 
+/**
+ * A coordinate, or null when it has never been set.
+ *
+ * Null rather than a fallback number on purpose. There is no sensible default
+ * shop location, and inventing one — 0,0 in the Atlantic, say — would make
+ * every customer measure thousands of kilometres away and quietly refuse the
+ * whole town. Absent has to stay absent so the caller can fall back to pincodes.
+ */
+function readCoordinate(raw: unknown, limit: number): number | null {
+  const value = typeof raw === 'string' ? Number(raw) : raw;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  if (raw === '' || Math.abs(value) > limit) return null;
+  return value;
+}
+
+const positiveNumber = z
+  .union([z.string(), z.number()])
+  .transform((v) => Number(v))
+  .refine((v) => Number.isFinite(v) && v > 0 && v <= 100, 'not a radius');
+
+function readRadius(raw: unknown, fallback: number): number {
+  const parsed = positiveNumber.safeParse(raw);
+  return parsed.success ? parsed.data : fallback;
+}
+
 export async function getShopSettings(): Promise<ShopSettings> {
   const rows = await withDbRetry(() => db.setting.findMany());
   const byKey = new Map(rows.map((row) => [row.key, row.value]));
@@ -89,6 +126,12 @@ export async function getShopSettings(): Promise<ShopSettings> {
         ? (byKey.get('whatsapp_number') as string)
         : SETTING_DEFAULTS.whatsapp_number,
     slotCapacity: readCount(byKey.get('slot_capacity'), SETTING_DEFAULTS.slot_capacity),
+    shopLat: readCoordinate(byKey.get('shop_lat'), 90),
+    shopLng: readCoordinate(byKey.get('shop_lng'), 180),
+    deliveryRadiusKm: readRadius(
+      byKey.get('delivery_radius_km'),
+      SETTING_DEFAULTS.delivery_radius_km
+    ),
   };
 }
 

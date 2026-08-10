@@ -53,6 +53,12 @@ model Address {
   pincode   String
   isDefault Boolean @default(false)
 
+  // Where the customer dropped their pin. Nullable because addresses saved
+  // before the map existed have none, and because the pincode override still
+  // lets such an address check out — see isServiceable.
+  lat Float?
+  lng Float?
+
   @@index([userId])
 }
 

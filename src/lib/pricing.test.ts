@@ -10,6 +10,9 @@ const settings: ShopSettings = {
   paymentsEnabled: false,
   whatsappNumber: '',
   slotCapacity: 20,
+  shopLat: null,
+  shopLng: null,
+  deliveryRadiusKm: 5,
 };
 
 describe('calculateTotals — delivery fee', () => {

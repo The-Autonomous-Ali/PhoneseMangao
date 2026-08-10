@@ -29,6 +29,9 @@ function settingsForm(overrides: Record<string, string> = {}): FormData {
     freeDeliveryAbove: '500',
     whatsappNumber: '+919876543210',
     slotCapacity: '20',
+    shopLat: '12.9784',
+    shopLng: '77.6408',
+    deliveryRadiusKm: '5',
     ...overrides,
   };
   for (const [key, value] of Object.entries(fields)) data.set(key, value);
@@ -61,7 +64,28 @@ describe('updateSettings', () => {
       free_delivery_above: '500',
       whatsapp_number: '+919876543210',
       slot_capacity: 20,
+      shop_lat: '12.9784',
+      shop_lng: '77.6408',
+      delivery_radius_km: '5',
     });
+  });
+
+  it('saves an empty shop location rather than refusing the whole form', async () => {
+    // The owner may not know his coordinates yet, and that must not stop him
+    // changing the delivery fee.
+    const result = await updateSettings(null, settingsForm({ shopLat: '', shopLng: '' }));
+
+    expect(result.ok).toBe(true);
+    expect(writeSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ shop_lat: '', shop_lng: '' })
+    );
+  });
+
+  it('rejects a latitude that is not on the earth', async () => {
+    const result = await updateSettings(null, settingsForm({ shopLat: '91' }));
+
+    expect(result.ok).toBe(false);
+    expect(writeSettings).not.toHaveBeenCalled();
   });
 
   it('accepts zero amounts', async () => {

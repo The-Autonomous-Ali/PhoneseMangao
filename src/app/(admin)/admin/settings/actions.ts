@@ -25,6 +25,9 @@ export async function updateSettings(_prev: unknown, formData: FormData): Promis
       freeDeliveryAbove: formText(formData, 'freeDeliveryAbove'),
       whatsappNumber: formText(formData, 'whatsappNumber'),
       slotCapacity: formText(formData, 'slotCapacity'),
+      shopLat: formText(formData, 'shopLat'),
+      shopLng: formText(formData, 'shopLng'),
+      deliveryRadiusKm: formText(formData, 'deliveryRadiusKm'),
     });
 
     await writeSettings({
@@ -33,6 +36,9 @@ export async function updateSettings(_prev: unknown, formData: FormData): Promis
       free_delivery_above: input.freeDeliveryAbove,
       whatsapp_number: input.whatsappNumber,
       slot_capacity: input.slotCapacity,
+      shop_lat: input.shopLat,
+      shop_lng: input.shopLng,
+      delivery_radius_km: input.deliveryRadiusKm,
     });
 
     refresh();

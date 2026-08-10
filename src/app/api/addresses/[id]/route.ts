@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { withDbRetry } from '@/lib/db-retry';
 import { getSession } from '@/lib/auth';
 import { addressSchema } from '@/lib/validation/address';
-import { isServiceable } from '@/lib/serviceability';
+import { isServiceable, serviceabilityMessage } from '@/lib/serviceability';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,11 +39,12 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
 
   const input = parsed.data;
 
-  const { serviceable } = await isServiceable({ pincode: input.pincode });
-  if (!serviceable) {
+  const check = await isServiceable({ pincode: input.pincode, lat: input.lat, lng: input.lng });
+  if (!check.serviceable) {
     return NextResponse.json(
       {
-        error: `We do not deliver to ${input.pincode} yet.`,
+        error: serviceabilityMessage(check, input.pincode),
+        code: check.reason,
         fieldErrors: { pincode: ['Outside our delivery area'] },
       },
       { status: 400 }
@@ -68,6 +69,10 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
           landmark: input.landmark ?? null,
           city: input.city,
           pincode: input.pincode,
+          // `?? null` rather than leaving it out: clearing a pin has to be
+          // possible, and an omitted key would silently keep the old one.
+          lat: input.lat ?? null,
+          lng: input.lng ?? null,
           // Never demote the last remaining default to nothing — checkout would
           // then have no address preselected.
           isDefault: input.isDefault || existing.isDefault,

@@ -65,6 +65,9 @@ const SETTINGS = {
   paymentsEnabled: true,
   whatsappNumber: '',
   slotCapacity: 20,
+  shopLat: null,
+  shopLng: null,
+  deliveryRadiusKm: 5,
 };
 
 const VERIFIED_USER = {
@@ -136,7 +139,7 @@ beforeEach(() => {
   vi.mocked(db.address.findFirst).mockReset().mockResolvedValue(ADDRESS as never);
   vi.mocked(getShopSettings).mockReset().mockResolvedValue(SETTINGS);
   vi.mocked(priceCart).mockReset().mockResolvedValue(pricedCart());
-  vi.mocked(isServiceable).mockReset().mockResolvedValue({ serviceable: true });
+  vi.mocked(isServiceable).mockReset().mockResolvedValue({ serviceable: true, reason: 'PINCODE_LISTED' });
   vi.mocked(bookSlot).mockReset().mockResolvedValue(undefined);
   vi.mocked(sendOtp).mockReset().mockResolvedValue(undefined);
   vi.mocked(db.$transaction).mockClear();
@@ -197,7 +200,7 @@ describe('POST /api/orders — refusals before any slot is claimed', () => {
 
   it('re-checks serviceability at order time, not just when the address was saved', async () => {
     // The shop can drop a pincode from its delivery area in between.
-    vi.mocked(isServiceable).mockResolvedValue({ serviceable: false });
+    vi.mocked(isServiceable).mockResolvedValue({ serviceable: false, reason: 'NOT_SERVICEABLE' });
 
     const response = await placeOrder(buildRequest(VALID_BODY));
 

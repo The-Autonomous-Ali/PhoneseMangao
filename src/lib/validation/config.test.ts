@@ -8,6 +8,9 @@ const VALID_SETTINGS = {
   freeDeliveryAbove: '500',
   whatsappNumber: '+919876543210',
   slotCapacity: '20',
+  shopLat: '12.9784',
+  shopLng: '77.6408',
+  deliveryRadiusKm: '5',
 };
 
 describe('pincodeSchema', () => {
@@ -87,6 +90,47 @@ describe('shopSettingsSchema', () => {
   it('rejects a WhatsApp number that is not a phone number', () => {
     expect(() =>
       shopSettingsSchema.parse({ ...VALID_SETTINGS, whatsappNumber: 'call the shop' })
+    ).toThrow();
+  });
+});
+
+describe('shopSettingsSchema — the delivery area', () => {
+  it('accepts an empty shop location', () => {
+    // The owner has to be able to save a delivery fee before he has looked up
+    // his own latitude. Demanding one here would lock him out of the screen.
+    const parsed = shopSettingsSchema.parse({ ...VALID_SETTINGS, shopLat: '', shopLng: '' });
+
+    expect(parsed.shopLat).toBe('');
+    expect(parsed.shopLng).toBe('');
+  });
+
+  it('accepts a southern or western coordinate', () => {
+    const parsed = shopSettingsSchema.parse({
+      ...VALID_SETTINGS,
+      shopLat: '-33.8688',
+      shopLng: '-70.6693',
+    });
+
+    expect(parsed.shopLat).toBe('-33.8688');
+  });
+
+  it.each([['91'], ['-91'], ['abc'], ['12.9784N']])('rejects a latitude of %s', (value) => {
+    expect(() => shopSettingsSchema.parse({ ...VALID_SETTINGS, shopLat: value })).toThrow();
+  });
+
+  it.each([['181'], ['-181'], ['east']])('rejects a longitude of %s', (value) => {
+    expect(() => shopSettingsSchema.parse({ ...VALID_SETTINGS, shopLng: value })).toThrow();
+  });
+
+  it('accepts a fractional radius', () => {
+    expect(
+      shopSettingsSchema.parse({ ...VALID_SETTINGS, deliveryRadiusKm: '7.5' }).deliveryRadiusKm
+    ).toBe('7.5');
+  });
+
+  it.each([['0'], ['-5'], ['101'], ['far']])('rejects a radius of %s', (value) => {
+    expect(() =>
+      shopSettingsSchema.parse({ ...VALID_SETTINGS, deliveryRadiusKm: value })
     ).toThrow();
   });
 });

@@ -35,10 +35,34 @@ export const slotCapacitySchema = z
   .transform(Number)
   .refine((v) => v <= 500, 'must be 500 or fewer');
 
+/**
+ * A coordinate, or '' for "not set".
+ *
+ * Empty has to stay a legal value: the shop location is unknown until the owner
+ * finds it, and a schema that demanded one would make the settings form
+ * unsavable until then — locking the owner out of the delivery fee because he
+ * has not yet looked up his own latitude.
+ */
+const coordinate = (limit: number) =>
+  z
+    .string()
+    .trim()
+    .refine(
+      (v) => v === '' || (/^-?\d{1,3}(\.\d{1,8})?$/.test(v) && Math.abs(Number(v)) <= limit),
+      `must be a coordinate between -${limit} and ${limit}, or left empty`
+    );
+
 export const shopSettingsSchema = z.object({
   deliveryFee: amount,
   minOrderValue: amount,
   freeDeliveryAbove: amount,
+  shopLat: coordinate(90),
+  shopLng: coordinate(180),
+  deliveryRadiusKm: z
+    .string()
+    .trim()
+    .regex(/^\d{1,3}(\.\d)?$/, 'must be a distance like 5 or 7.5')
+    .refine((v) => Number(v) > 0 && Number(v) <= 100, 'must be between 0 and 100 km'),
   whatsappNumber: z
     .string()
     .trim()

@@ -77,6 +77,41 @@ export function SettingsForm({
           />
         </div>
 
+        <div className="space-y-2 border-t pt-4">
+          <div className="text-sm font-medium">Delivery area</div>
+          <p className="text-xs text-muted-foreground">
+            Until the shop location is filled in, delivery is decided only by the pincode list.
+            Once it is set, any address within the radius is served, and a listed pincode is
+            served whatever its distance.
+          </p>
+
+          <div className="flex flex-wrap gap-6 pt-2">
+            <Field
+              name="shopLat"
+              label="Shop latitude"
+              hint="e.g. 12.9784. Leave empty if unknown."
+              defaultValue={settings.shopLat === null ? '' : String(settings.shopLat)}
+            />
+            <Field
+              name="shopLng"
+              label="Shop longitude"
+              hint="e.g. 77.6408. Leave empty if unknown."
+              defaultValue={settings.shopLng === null ? '' : String(settings.shopLng)}
+            />
+            <Field
+              name="deliveryRadiusKm"
+              label="Delivery radius (km)"
+              hint="How far the shop will drive."
+              defaultValue={String(settings.deliveryRadiusKm)}
+            />
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            To find the coordinates: open Google Maps, right-click the shop, and click the pair of
+            numbers at the top of the menu to copy them. Latitude is the first.
+          </p>
+        </div>
+
         <Button type="submit" disabled={pending}>
           {pending ? 'Saving…' : 'Save settings'}
         </Button>
