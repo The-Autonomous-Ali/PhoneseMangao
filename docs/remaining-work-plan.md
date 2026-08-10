@@ -1,6 +1,6 @@
 # Remaining work
 
-**Updated:** 2026-08-10 · **Branch:** `phase1.5-hardening` @ `9a41722` · 503 tests green
+**Updated:** 2026-08-10 · **Branch:** `phase1.5-hardening` @ `a978dee` · 578 tests green
 
 Phases 1–5 are done and pushed. A customer can browse, fill a basket, check out,
 and pay — cash with an OTP confirmation, or online once payments are switched
@@ -18,9 +18,11 @@ This is the screen the owner lives in daily. The design doc calls out two
 things it must get right: the picking list ("he will ask for this on day one")
 and the ability to advance an order's status in one action.
 
-**6A (6.1–6.4) is done**, specced in
+**6A and 6B are done.** 6A (6.1–6.4) is specced in
 `docs/superpowers/specs/2026-08-10-admin-order-operations-design.md` and built
-across `d13cc97..45789a5`. What remains below is 6B (6.5–6.7) and 6C (6.8–6.9).
+across `d13cc97..45789a5`; 6B (6.5–6.7) in
+`docs/superpowers/specs/2026-08-10-shop-configuration-design.md`, built across
+`ee90a5a..a978dee`. Only **6C (6.8–6.9)** remains.
 
 | # | Piece | Done when |
 |---|---|---|
@@ -28,9 +30,9 @@ across `d13cc97..45789a5`. What remains below is 6B (6.5–6.7) and 6C (6.8–6.
 | ~~6.2~~ | ~~**Status transitions**~~ | **Done.** Forward one step, no undo; conditional writes guard two open tabs |
 | ~~6.3~~ | ~~**Picking list**~~ | **Done.** Stock totals, then a slip per order, each on a fresh sheet |
 | ~~6.4~~ | ~~**Weight settlement**~~ | **Done.** Needed a new `OrderItem.unitValue` column — see below |
-| 6.5 | **`/admin/slots`** | Week view: set capacity, close one slot, block a whole date for a holiday |
-| 6.6 | **`/admin/pincodes`** | Add and remove serviceable pincodes — currently a database edit |
-| 6.7 | **`/admin/settings`** | Delivery fee, minimum order, free-delivery threshold, WhatsApp number, shop-closed switch, `payments_enabled` |
+| ~~6.5~~ | ~~**`/admin/slots`**~~ | **Done.** Week view; capacity per slot plus a `slot_capacity` default the cron reads |
+| ~~6.6~~ | ~~**`/admin/pincodes`**~~ | **Done.** Add and deactivate — no hard delete, matching categories |
+| ~~6.7~~ | ~~**`/admin/settings`**~~ | **Done.** Payments switch refuses to turn on without Razorpay keys |
 | 6.8 | **Telegram alerts** | Owner gets a message when an order reaches CONFIRMED |
 | 6.9 | **Dashboard** | Today's orders by slot, revenue, low stock — replaces the stub |
 
@@ -42,9 +44,12 @@ the driver collecting `finalTotal`; online orders absorb the difference, per
 §4.6. The delivery fee is never recomputed at settlement: a basket that earned
 free delivery keeps it even when adjusted weights fall below the threshold.
 
-6.5 and 6.6 are small and unblock real operation — the shop currently has slots
-only because cron generates them at a fixed capacity of 20, and three seeded
-pincodes.
+6.5 needed capacity in two places, not one. Per-slot alone would mean re-editing
+twenty-one rows a week to keep a permanent change; a global default alone would
+leave no way to cap a single festival morning. `generate-slots` now reads
+`slot_capacity`, and each generated slot can be overridden. Closing a slot stops
+new orders and nothing else — the orders already in it still need delivering,
+and the confirm step says so with the count.
 
 ### 2. Your frontend design
 
@@ -119,9 +124,12 @@ mobile audit.
 - The dev database's six test orders were deleted when `OrderItem.unitValue`
   was added, and the slot counters reset with them. A "Home" address on the
   seeded admin and one variant at `stockQty: 48` remain.
-- **Phase 6A has had no live end-to-end run.** It is covered by tests, `tsc`,
-  lint and a production build, but no real order has been walked from placed to
-  settled against the database. Do that before trusting it in front of the owner.
+- **Neither 6A nor 6B has had a live end-to-end run.** Both are covered by
+  tests, `tsc`, lint and a production build, but no real order has been walked
+  from placed to settled, and no setting has been saved through the screen
+  against the database. Do that before trusting either in front of the owner.
+- **Replace the seeded pincodes through `/admin/pincodes` now**, rather than in
+  the database. The screen exists for it.
 - `grocery-ecommerce-system-design.md` in the repo root is an untracked
   duplicate of `docs/reference/`. Delete it or commit it.
 - `GET /api/categories`, `/api/products` and `/api/products/:slug` from the
