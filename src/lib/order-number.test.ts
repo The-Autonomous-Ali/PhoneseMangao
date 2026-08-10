@@ -20,8 +20,18 @@ describe('generateOrderNumber', () => {
     expect(tails).not.toMatch(/[IO01]/);
   });
 
-  it('does not repeat itself in a realistic day of orders', () => {
+  it('draws its tail from enough keyspace that repeats stay rare', () => {
     const numbers = new Set(Array.from({ length: 500 }, () => generateOrderNumber()));
-    expect(numbers.size).toBe(500);
+
+    // Four characters from a 32-symbol alphabet is a keyspace of 1,048,576, so
+    // by the birthday bound roughly 11% of 500-draw samples contain one
+    // collision. Asserting a clean sweep here made this test fail about one run
+    // in nine — a real property of the generator read as a bug.
+    //
+    // The guarantee that actually matters is not that these never repeat, but
+    // that a repeat costs nothing: order creation catches the unique violation
+    // on orderNumber and retries with a fresh one. That is the behaviour worth
+    // trusting, and it lives in src/app/api/orders/route.ts.
+    expect(numbers.size).toBeGreaterThanOrEqual(498);
   });
 });

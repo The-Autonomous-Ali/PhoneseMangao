@@ -46,7 +46,7 @@ vi.mock('@/lib/razorpay', async () => {
   };
 });
 
-import { UnitType } from '@prisma/client';
+import { Prisma, UnitType } from '@prisma/client';
 import { db } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { priceCart } from '@/lib/cart-pricing';
@@ -111,6 +111,15 @@ const VALID_BODY = {
   slotId: 'slot_1',
   paymentMethod: 'COD',
 };
+
+/** The unique violation Postgres raises when a generated reference is taken. */
+function orderNumberTaken() {
+  return new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+    code: 'P2002',
+    clientVersion: '6.19.3',
+    meta: { target: ['orderNumber'] },
+  });
+}
 
 function buildRequest(body: unknown) {
   return new NextRequest('http://localhost/api/orders', {
@@ -358,6 +367,51 @@ describe('POST /api/orders — placing the order', () => {
     const response = await placeOrder(buildRequest(VALID_BODY));
 
     expect(response.status).toBe(201);
+  });
+
+  it('retries with a fresh reference when an order number collides', async () => {
+    // Four random characters out of a 32-symbol alphabet collide in roughly one
+    // batch of 500 in nine, so this is routine rather than exotic — and it is
+    // this retry, not the generator, that makes orderNumber dependable.
+    tx.order.create
+      .mockRejectedValueOnce(orderNumberTaken())
+      .mockResolvedValue({ id: 'order_1', orderNumber: 'PM260809-WXYZ', status: 'PENDING_OTP' });
+
+    const response = await placeOrder(buildRequest(VALID_BODY));
+
+    expect(response.status).toBe(201);
+    expect(tx.order.create).toHaveBeenCalledTimes(2);
+
+    const [first, second] = tx.order.create.mock.calls.map(
+      (call) => call[0].data.orderNumber as string
+    );
+    expect(second).not.toBe(first);
+  });
+
+  it('gives up after five collisions rather than looping forever', async () => {
+    tx.order.create.mockRejectedValue(orderNumberTaken());
+
+    const response = await placeOrder(buildRequest(VALID_BODY));
+
+    expect(response.status).toBe(500);
+    expect(tx.order.create).toHaveBeenCalledTimes(5);
+  });
+
+  it('does not retry a unique violation on some other column', async () => {
+    // Only the order number is safe to regenerate and try again. Anything else
+    // would spin five times over a failure that was never going to clear.
+    tx.order.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: '6.19.3',
+        meta: { target: ['razorpayOrderId'] },
+      })
+    );
+
+    const response = await placeOrder(buildRequest(VALID_BODY));
+
+    expect(response.status).toBe(500);
+    expect(tx.order.create).toHaveBeenCalledTimes(1);
   });
 });
 
