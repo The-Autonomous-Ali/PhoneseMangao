@@ -95,6 +95,7 @@ function pricedCart(itemsTotal = '250.00') {
         unitType: UnitType.KG,
         imageUrl: null,
         unitPrice: '45.00',
+        unitValue: '1.000',
         quantity: 2,
         lineTotal: '90.00',
       },
@@ -320,6 +321,9 @@ describe('POST /api/orders — placing the order', () => {
       productName: 'Tomatoes',
       variantLabel: '1 kg',
       unitPrice: '45.00',
+      // The pack size rides along with the price. Settlement divides one by the
+      // other to get a per-kilo rate, and cannot ask Variant for it later.
+      unitValue: '1.000',
       quantity: 2,
     });
   });

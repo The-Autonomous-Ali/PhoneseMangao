@@ -189,6 +189,13 @@ model OrderItem {
   variantLabel String
   unitType     UnitType
   unitPrice    Decimal @db.Decimal(10, 2)
+  // The pack size behind unitPrice, denormalised for the same reason as the
+  // rest of this block. Settlement prices a delivery by the kilo, and a "5 kg"
+  // bag at Rs 160 stores unitPrice 160.00 against quantity 1 — Rs 32/kg is not
+  // recoverable from that pair alone. Reading it back off Variant is not an
+  // option: variantId carries no relation on purpose, so withdrawing a product
+  // cannot break an old order, and the price may have moved since.
+  unitValue    Decimal @db.Decimal(10, 3)
   quantity     Int
   lineTotal    Decimal @db.Decimal(10, 2)
 

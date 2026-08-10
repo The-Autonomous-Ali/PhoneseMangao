@@ -11,6 +11,7 @@ function variant(overrides: Record<string, unknown> = {}) {
     id: 'v_tomato_1kg',
     label: '1 kg',
     unitType: UnitType.KG,
+    unitValue: new Prisma.Decimal('1'),
     price: new Prisma.Decimal('45.00'),
     isAvailable: true,
     stockQty: null,
@@ -40,6 +41,23 @@ describe('priceCart — pricing', () => {
     expect(priced.items[0].unitPrice).toBe('45.00');
     expect(priced.items[0].lineTotal).toBe('135.00');
     expect(priced.itemsTotal).toBe('135.00');
+  });
+
+  it('carries the variant unit value through to the priced line', async () => {
+    vi.mocked(db.variant.findMany).mockResolvedValue([
+      variant({
+        id: 'v_potato_5kg',
+        label: '5 kg',
+        unitValue: new Prisma.Decimal('5'),
+        price: new Prisma.Decimal('160'),
+      }),
+    ] as never);
+
+    const priced = await priceCart([{ variantId: 'v_potato_5kg', quantity: 1 }]);
+
+    // Without this the order stores 160.00 x 1 and settlement cannot recover
+    // the Rs 32/kg needed to price a 4.7 kg delivery.
+    expect(priced.items[0].unitValue).toBe('5.000');
   });
 
   it('sums several lines without floating-point drift', async () => {

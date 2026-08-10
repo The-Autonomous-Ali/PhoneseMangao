@@ -194,6 +194,7 @@ export async function POST(request: NextRequest) {
                     variantLabel: line.variantLabel,
                     unitType: line.unitType,
                     unitPrice: line.unitPrice,
+                    unitValue: line.unitValue,
                     quantity: line.quantity,
                     lineTotal: line.lineTotal,
                   })),

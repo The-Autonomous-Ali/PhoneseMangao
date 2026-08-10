@@ -14,6 +14,8 @@ export interface PricedLine {
   imageUrl: string | null;
   /** Decimal serialised as a string, so nothing rounds in transit. */
   unitPrice: string;
+  /** Pack size behind `unitPrice`, e.g. '5.000'. Settlement divides by this. */
+  unitValue: string;
   quantity: number;
   lineTotal: string;
 }
@@ -112,6 +114,7 @@ export async function priceCart(items: CartItem[]): Promise<PricedCart> {
       unitType: variant.unitType,
       imageUrl: variant.product.imageUrl,
       unitPrice: variant.price.toFixed(2),
+      unitValue: variant.unitValue.toFixed(3),
       quantity,
       lineTotal: lineTotal.toFixed(2),
     });
