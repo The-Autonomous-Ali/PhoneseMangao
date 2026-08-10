@@ -6,9 +6,25 @@ vi.mock('@/lib/cron', async () => {
   return { ...actual, withAdvisoryLock: vi.fn() };
 });
 
+vi.mock('@/lib/settings', () => ({ getShopSettings: vi.fn() }));
+
 import { withAdvisoryLock, CRON_SECRET_HEADER } from '@/lib/cron';
 import { resetEnvCache } from '@/lib/env';
+import { getShopSettings } from '@/lib/settings';
 import { POST as generateSlots } from './route';
+
+/** The route reads only slotCapacity; the rest is here to satisfy the type. */
+function settings(slotCapacity: number) {
+  return {
+    deliveryFee: '30.00',
+    minOrderValue: '199.00',
+    freeDeliveryAbove: '500.00',
+    shopOpen: true,
+    paymentsEnabled: false,
+    whatsappNumber: '',
+    slotCapacity,
+  };
+}
 
 const ORIGINAL = { ...process.env };
 const SECRET = 'cron-secret-at-least-16';
@@ -41,6 +57,7 @@ beforeEach(() => {
   } as NodeJS.ProcessEnv;
   resetEnvCache();
   vi.mocked(withAdvisoryLock).mockReset();
+  vi.mocked(getShopSettings).mockReset().mockResolvedValue(settings(20));
   vi.spyOn(console, 'log').mockImplementation(() => {});
 });
 
@@ -83,6 +100,29 @@ describe('POST /api/cron/generate-slots', () => {
     await generateSlots(authorized());
 
     expect(createMany.mock.calls[0][0]).toMatchObject({ skipDuplicates: true });
+  });
+
+  it('generates at the configured capacity rather than a hardcoded one', async () => {
+    vi.mocked(getShopSettings).mockResolvedValue(settings(35));
+    const createMany = captureCreateMany();
+
+    await generateSlots(authorized());
+
+    const { data } = createMany.mock.calls[0][0] as { data: { capacity: number }[] };
+    expect(data.every((row) => row.capacity === 35)).toBe(true);
+  });
+
+  it('still generates when the capacity is zero, leaving the slots unbookable', async () => {
+    // Zero is a real configuration. Skipping generation would leave the week
+    // empty and the owner with no row to raise the capacity back on.
+    vi.mocked(getShopSettings).mockResolvedValue(settings(0));
+    const createMany = captureCreateMany();
+
+    await generateSlots(authorized());
+
+    const { data } = createMany.mock.calls[0][0] as { data: { capacity: number }[] };
+    expect(data).toHaveLength(21);
+    expect(data.every((row) => row.capacity === 0)).toBe(true);
   });
 
   it('files each slot against a calendar day, not an instant', async () => {

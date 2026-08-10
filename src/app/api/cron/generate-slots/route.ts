@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SlotType, type Prisma } from '@prisma/client';
 import { isAuthorizedCronRequest, withAdvisoryLock } from '@/lib/cron';
+import { getShopSettings } from '@/lib/settings';
 
 /** How far ahead slots exist. Long enough to plan, short enough to change. */
 const DAYS_AHEAD = 7;
-
-/** Orders one van can carry in a single window. Not exported: a route module
- *  may only export handlers and Next's own config keys. */
-const SLOT_CAPACITY = 20;
 
 /**
  * Ordering cut-offs, as hours from midnight IST on the delivery date. Negative
@@ -64,6 +61,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
   }
 
+  // One read before the lock. A missing or nonsense value falls back to the
+  // default inside getShopSettings, because a night skipped over one bad
+  // settings row would leave the shop with no slots to sell at all.
+  const { slotCapacity } = await getShopSettings();
+
   const now = new Date();
   const rows: Prisma.DeliverySlotCreateManyInput[] = [];
 
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
       rows.push({
         date,
         slotType,
-        capacity: SLOT_CAPACITY,
+        capacity: slotCapacity,
         cutoffAt: cutoffInstant(date, CUTOFF_HOURS_IST[slotType]),
       });
     }
