@@ -64,6 +64,7 @@ const SETTINGS = {
   shopOpen: true,
   paymentsEnabled: true,
   whatsappNumber: '',
+  slotCapacity: 20,
 };
 
 const VERIFIED_USER = {

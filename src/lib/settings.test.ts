@@ -1,9 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('@/lib/db', () => ({ db: { setting: { findMany: vi.fn() } } }));
+vi.mock('@/lib/db', () => ({
+  db: {
+    setting: { findMany: vi.fn(), upsert: vi.fn() },
+    $transaction: vi.fn((ops: unknown[]) => Promise.resolve(ops)),
+  },
+}));
 
 import { db } from '@/lib/db';
-import { getShopSettings } from './settings';
+import { getShopSettings, writeSettings } from './settings';
 
 function rows(values: Record<string, unknown>) {
   return Object.entries(values).map(([key, value]) => ({ key, value }));
@@ -11,6 +16,8 @@ function rows(values: Record<string, unknown>) {
 
 beforeEach(() => {
   vi.mocked(db.setting.findMany).mockReset().mockResolvedValue([] as never);
+  vi.mocked(db.setting.upsert).mockReset().mockReturnValue({} as never);
+  vi.mocked(db.$transaction).mockClear();
 });
 
 describe('getShopSettings', () => {
@@ -80,4 +87,62 @@ describe('getShopSettings — payments', () => {
       expect((await getShopSettings()).paymentsEnabled).toBe(false);
     }
   );
+});
+
+describe('getShopSettings — slot capacity', () => {
+  it('defaults to twenty, the capacity the cron used to hardcode', async () => {
+    expect((await getShopSettings()).slotCapacity).toBe(20);
+  });
+
+  it('reads a configured capacity', async () => {
+    vi.mocked(db.setting.findMany).mockResolvedValue(rows({ slot_capacity: 30 }) as never);
+    expect((await getShopSettings()).slotCapacity).toBe(30);
+  });
+
+  it('accepts a string, since the column is JSON', async () => {
+    vi.mocked(db.setting.findMany).mockResolvedValue(rows({ slot_capacity: '30' }) as never);
+    expect((await getShopSettings()).slotCapacity).toBe(30);
+  });
+
+  it('allows zero, which is how a slot stays visible but unbookable', async () => {
+    vi.mocked(db.setting.findMany).mockResolvedValue(rows({ slot_capacity: 0 }) as never);
+    expect((await getShopSettings()).slotCapacity).toBe(0);
+  });
+
+  it.each([['many'], [null], [-5], [2.5], [10000]])(
+    'falls back when slot_capacity holds %s',
+    async (value) => {
+      vi.mocked(db.setting.findMany).mockResolvedValue(rows({ slot_capacity: value }) as never);
+      expect((await getShopSettings()).slotCapacity).toBe(20);
+    }
+  );
+});
+
+describe('writeSettings', () => {
+  it('upserts each key so a first write and an update take the same path', async () => {
+    await writeSettings({ delivery_fee: '45.00', shop_open: false });
+
+    expect(db.setting.upsert).toHaveBeenCalledWith({
+      where: { key: 'delivery_fee' },
+      create: { key: 'delivery_fee', value: '45.00' },
+      update: { value: '45.00' },
+    });
+    expect(db.setting.upsert).toHaveBeenCalledWith({
+      where: { key: 'shop_open' },
+      create: { key: 'shop_open', value: false },
+      update: { value: false },
+    });
+  });
+
+  it('writes every key in one transaction, so a half-saved form cannot survive', async () => {
+    await writeSettings({ delivery_fee: '45.00', min_order_value: '299.00' });
+
+    expect(db.$transaction).toHaveBeenCalledTimes(1);
+    expect(db.$transaction).toHaveBeenCalledWith(expect.arrayContaining([expect.anything()]));
+  });
+
+  it('does nothing at all when given nothing', async () => {
+    await writeSettings({});
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
 });

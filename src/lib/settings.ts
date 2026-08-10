@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { withDbRetry } from '@/lib/db-retry';
 
@@ -21,6 +22,9 @@ export const SETTING_DEFAULTS = {
   // KYC has not cleared offers a payment method that errors at the last step.
   payments_enabled: false,
   whatsapp_number: '',
+  // What the cron gives each newly generated slot. Editable so a bigger van
+  // does not mean re-editing twenty-one rows a week, forever.
+  slot_capacity: 20,
 } as const;
 
 export type SettingKey = keyof typeof SETTING_DEFAULTS;
@@ -34,6 +38,8 @@ export interface ShopSettings {
   /** Whether online payment is offered. Cash on delivery is always available. */
   paymentsEnabled: boolean;
   whatsappNumber: string;
+  /** Orders one van can carry in a window. Applied to newly generated slots. */
+  slotCapacity: number;
 }
 
 // Settings arrive as JSON, so a number written from the admin and a string
@@ -45,6 +51,18 @@ const money = z
 
 function readMoney(raw: unknown, fallback: string): string {
   const parsed = money.safeParse(raw);
+  return parsed.success ? parsed.data : fallback;
+}
+
+// Same tolerance as money, for the same reason: a nonsense capacity should
+// generate slots at the default, not stop the shop having any slots to sell.
+const wholeCount = z
+  .union([z.string(), z.number()])
+  .transform((v) => Number(v))
+  .refine((v) => Number.isInteger(v) && v >= 0 && v <= 500, 'not a capacity');
+
+function readCount(raw: unknown, fallback: number): number {
+  const parsed = wholeCount.safeParse(raw);
   return parsed.success ? parsed.data : fallback;
 }
 
@@ -70,5 +88,36 @@ export async function getShopSettings(): Promise<ShopSettings> {
       typeof byKey.get('whatsapp_number') === 'string'
         ? (byKey.get('whatsapp_number') as string)
         : SETTING_DEFAULTS.whatsapp_number,
+    slotCapacity: readCount(byKey.get('slot_capacity'), SETTING_DEFAULTS.slot_capacity),
   };
+}
+
+/**
+ * Saves settings, creating rows that do not exist yet.
+ *
+ * Upsert rather than update because the table starts empty — every value in
+ * `SETTING_DEFAULTS` is a default precisely because its row may never have been
+ * written. One transaction, so a form that fails partway cannot leave the shop
+ * with a new delivery fee and an old minimum order.
+ *
+ * Values are written as given. Validation belongs to the caller's schema, and
+ * `getShopSettings` treats anything unreadable as absent regardless.
+ */
+export async function writeSettings(
+  values: Partial<Record<SettingKey, unknown>>
+): Promise<void> {
+  const entries = Object.entries(values) as [SettingKey, unknown][];
+  if (entries.length === 0) return;
+
+  await withDbRetry(() =>
+    db.$transaction(
+      entries.map(([key, value]) =>
+        db.setting.upsert({
+          where: { key },
+          create: { key, value: value as Prisma.InputJsonValue },
+          update: { value: value as Prisma.InputJsonValue },
+        })
+      )
+    )
+  );
 }
