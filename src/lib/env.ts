@@ -74,6 +74,11 @@ const schema = z
     WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
     WHATSAPP_ACCESS_TOKEN: z.string().optional(),
     WHATSAPP_AUTH_TEMPLATE_NAME: z.string().optional(),
+    // Owner alerts. Deliberately absent from WHATSAPP_REQUIRED_KEYS: the
+    // Utility template has to clear Meta's review before it exists, and a
+    // pending approval must not stop the shop booting on an OTP configuration
+    // that already works. A missing value skips the alert.
+    WHATSAPP_ALERT_TEMPLATE_NAME: z.string().optional(),
     WHATSAPP_OWNER_NUMBER: z.string().optional(),
 
     // A guessable cron secret is the same as no secret: these routes mutate
@@ -180,6 +185,7 @@ export type Env = {
   WHATSAPP_PHONE_NUMBER_ID?: string;
   WHATSAPP_ACCESS_TOKEN?: string;
   WHATSAPP_AUTH_TEMPLATE_NAME?: string;
+  WHATSAPP_ALERT_TEMPLATE_NAME?: string;
   WHATSAPP_OWNER_NUMBER?: string;
   CRON_SECRET?: string;
 };
@@ -213,6 +219,7 @@ export function parseEnv(raw: NodeJS.ProcessEnv): Env {
     WHATSAPP_PHONE_NUMBER_ID: blankToUndefined(raw.WHATSAPP_PHONE_NUMBER_ID),
     WHATSAPP_ACCESS_TOKEN: blankToUndefined(raw.WHATSAPP_ACCESS_TOKEN),
     WHATSAPP_AUTH_TEMPLATE_NAME: blankToUndefined(raw.WHATSAPP_AUTH_TEMPLATE_NAME),
+    WHATSAPP_ALERT_TEMPLATE_NAME: blankToUndefined(raw.WHATSAPP_ALERT_TEMPLATE_NAME),
     WHATSAPP_OWNER_NUMBER: blankToUndefined(raw.WHATSAPP_OWNER_NUMBER),
     CRON_SECRET: blankToUndefined(raw.CRON_SECRET),
   });
