@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [master]
+
+# A new push supersedes the run before it. Without this, a branch pushed three
+# times in a minute keeps three runners busy proving things about commits
+# nobody is waiting on any more.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, types, tests, build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Matches the Dockerfile, which builds and runs on node:22-alpine.
+          # CI passing on a version production never sees is a false green.
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Must come before anything that typechecks or imports @prisma/client.
+      # The generated client is not in the repo, so on a clean checkout its
+      # types do not exist yet and both tsc and the test suite fail to resolve.
+      - name: Generate the Prisma client
+        run: npx prisma generate
+
+      # Ordered cheapest first: the job stops at the first failure, so a lint
+      # error should not cost a full build to discover.
+      - name: Lint
+        run: npm run lint
+
+      # The reason this workflow exists. Across phases 6A, 6B and the delivery
+      # radius work, `tsc --noEmit` went red while `npm test` stayed green four
+      # separate times — every time a test fixture that had not been widened
+      # along with the type it stands in for. The suite cannot catch that.
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        # Fake values, and they are worth being blunt about: env.ts enforces its
+        # production rules during `next build`, and CI has no .env because it is
+        # gitignored. These get the build past that validation. They prove the
+        # app compiles. They prove nothing whatsoever about whether any real
+        # deployment is correctly configured.
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+          JWT_SECRET: ci-not-a-real-secret-at-least-32-chars
+          APP_URL: https://ci.invalid
+          GOOGLE_CLIENT_ID: ci
+          GOOGLE_CLIENT_SECRET: ci
+          CRON_SECRET: ci-not-a-real-cron-secret
+          SMS_DRIVER: console
+          IMAGE_DRIVER: cloudinary
+          CLOUDINARY_CLOUD_NAME: ci
+          CLOUDINARY_API_KEY: ci
+          CLOUDINARY_API_SECRET: ci
+        run: npm run build
