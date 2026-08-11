@@ -165,6 +165,16 @@ mobile audit.
   Daylight and a plain surface beat any amount of styling here. Shooting to the
   wrong shape is the one thing worth getting right first — a portrait photo is
   centre-cropped to a square and loses the top and bottom of whatever it shows.
+
+  **If stock photography is wanted instead, use Pexels, not Wikimedia.** That
+  was tried: Wikimedia's public-domain and CC0 pool for produce is thin and
+  badly labelled — the searches returned a 1915 botany plate for tomatoes, a
+  distribution *map* for coriander, a 1951 seed catalogue for vegetables, and
+  nothing at all for basmati rice. Its usable photographs are mostly CC BY-SA
+  or GFDL, which oblige the shop to credit the photographer on the page and
+  license derivatives alike — not a commitment worth making for a placeholder.
+  Pexels and Unsplash both permit commercial use with no attribution and have
+  real food photography; both want a free API key.
 - **Cloudinary credentials** before launch. `env.ts` refuses `IMAGE_DRIVER=local`
   in production, because a container's filesystem is wiped on restart and every
   uploaded photo would go with it. Local uploads are fine for development only.
