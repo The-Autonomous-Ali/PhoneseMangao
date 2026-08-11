@@ -183,6 +183,9 @@ model Order {
   @@index([userId, placedAt])
   @@index([status, placedAt])
   @@index([slotId])
+  // The dashboard's revenue query filters on this on every load of the screen
+  // the owner opens most, and none of the three above covers it.
+  @@index([deliveredAt])
 }
 
 model OrderItem {
