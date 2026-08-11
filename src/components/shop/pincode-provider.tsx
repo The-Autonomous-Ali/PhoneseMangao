@@ -103,14 +103,21 @@ function GateForm({ onConfirmed }: { onConfirmed: (value: StoredPincode) => void
 }
 
 /**
- * Blocks the storefront until a serviceable PIN code is entered.
+ * Remembers where the customer wants delivery. Asks, but does not insist.
  *
- * A deliberate choice over checking at checkout: nobody fills a basket only to
- * be told at the end that the shop cannot reach them. The cost is that a search
- * crawler rendering JavaScript sees this panel rather than the catalog. The
- * pages underneath are still fully server-rendered, so the content is in the
- * HTML — softening this to a dismissible banner is a change to this component
- * alone.
+ * This used to block the storefront until a serviceable PIN code was entered,
+ * on the reasoning that nobody should fill a basket only to be told at the end
+ * that the shop cannot reach them. That reasoning is sound and the trade was
+ * still wrong: it put a form in front of the shop window. A stranger who has
+ * never heard of the place was asked for their address before being shown a
+ * single tomato, and a crawler rendering JavaScript saw the panel instead of
+ * the catalogue.
+ *
+ * So it now opens only when asked — from the header, or from the cart. Nothing
+ * is lost in correctness, because the PIN code was never what enforced
+ * serviceability: saving an address checks it, and `POST /api/orders` checks it
+ * again at the moment of ordering. This is a convenience, and it is now
+ * treated as one.
  */
 export function PincodeProvider({ children }: { children: ReactNode }) {
   const [stored, setStored] = useState<StoredPincode | null>(null);
@@ -118,9 +125,10 @@ export function PincodeProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const existing = read();
-    setStored(existing);
-    setOpen(!existing);
+    // Deliberately not `setOpen(!existing)`. Arriving with no PIN code stored
+    // is the normal state of a first-time visitor, not a problem to solve
+    // before they are allowed to look.
+    setStored(read());
     setHydrated(true);
   }, []);
 
@@ -151,24 +159,24 @@ export function PincodeProvider({ children }: { children: ReactNode }) {
           aria-modal="true"
           aria-labelledby="gate-title"
         >
-          <div className="w-full max-w-sm rounded-xl bg-background p-6 shadow-lg">
-            <h2 id="gate-title" className="text-lg font-semibold">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-lg">
+            <h2 id="gate-title" className="text-xl">
               Where are we delivering?
             </h2>
             <p className="mt-1 mb-4 text-sm text-muted-foreground">
-              {SHOP_NAME} delivers to selected PIN codes. Enter yours to see what we have today.
+              {SHOP_NAME} delivers to selected areas. Check yours, and we will remember it.
             </p>
             <GateForm onConfirmed={confirm} />
-            {stored && (
-              <Button
-                type="button"
-                variant="ghost"
-                className="mt-2 w-full"
-                onClick={() => setOpen(false)}
-              >
-                Keep {stored.pincode}
-              </Button>
-            )}
+            {/* Always dismissible. The panel is a convenience now, and a
+                convenience with no way out is just a gate with better copy. */}
+            <Button
+              type="button"
+              variant="ghost"
+              className="mt-2 w-full"
+              onClick={() => setOpen(false)}
+            >
+              {stored ? `Keep ${stored.pincode}` : 'Not now, I am just looking'}
+            </Button>
           </div>
         </div>
       )}

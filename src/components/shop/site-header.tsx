@@ -52,16 +52,18 @@ export function SiteHeader() {
           </button>
         </form>
 
-        {/* Both read localStorage, so both wait for hydration rather than
-            flashing a wrong value on first paint. */}
-        {pincodeHydrated && pincode && (
+        {/* Reads localStorage, so it waits for hydration rather than flashing a
+            wrong value on first paint. Shown either way now: with a PIN code it
+            reports where we are delivering, without one it is the only thing
+            offering to check — the panel no longer opens by itself. */}
+        {pincodeHydrated && (
           <button
             type="button"
             onClick={change}
-            className="flex items-center gap-1 rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            className="flex items-center gap-1 rounded-full px-3 py-2 text-sm whitespace-nowrap text-muted-foreground transition-colors hover:text-gold"
           >
             <MapPin className="size-4" />
-            {pincode}
+            {pincode ?? 'Check delivery'}
           </button>
         )}
 

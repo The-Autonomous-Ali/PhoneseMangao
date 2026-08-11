@@ -41,7 +41,7 @@ interface ValidatedCart {
 
 export function CartView() {
   const { items, setQuantity, remove, hydrated } = useCart();
-  const { pincode } = usePincode();
+  const { pincode, change } = usePincode();
   const [priced, setPriced] = useState<ValidatedCart | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -183,7 +183,16 @@ export function CartView() {
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">
-            Delivery{pincode ? ` to ${pincode}` : ''}
+            {pincode ? (
+              `Delivery to ${pincode}`
+            ) : (
+              // The shop no longer asks for an area up front, so this is the
+              // first natural moment to offer it — before they commit, and
+              // still well before checkout refuses an address it cannot reach.
+              <button type="button" onClick={change} className="underline hover:text-gold">
+                Delivery — check your area
+              </button>
+            )}
           </span>
           <span className={cn('tabular-nums', priced?.deliveryWaived && 'text-gold')}>
             {priced?.deliveryWaived ? 'Free' : formatRupees(priced?.deliveryFee ?? '0.00')}
