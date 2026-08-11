@@ -152,6 +152,22 @@ mobile audit.
 - **The shop's coordinates**, for the 5 km radius. In Google Maps, right-click
   the shop and click the pair of numbers at the top of the menu to copy them;
   latitude is the first. Enter them on `/admin/settings`.
+- **Product photographs.** Every product and category currently falls back to
+  its name in text, which reads as a failed image. Uploading already works from
+  `/admin/products` — a phone is fine. What the layout expects:
+
+  | Where | Shape | Notes |
+  |---|---|---|
+  | Product | **square** | used on the card and the product page |
+  | Category | **3:2 landscape** | |
+  | Any | under **5 MB**, jpeg/png/webp | enforced by `validate.ts` |
+
+  Daylight and a plain surface beat any amount of styling here. Shooting to the
+  wrong shape is the one thing worth getting right first — a portrait photo is
+  centre-cropped to a square and loses the top and bottom of whatever it shows.
+- **Cloudinary credentials** before launch. `env.ts` refuses `IMAGE_DRIVER=local`
+  in production, because a container's filesystem is wiped on restart and every
+  uploaded photo would go with it. Local uploads are fine for development only.
 
 ---
 
