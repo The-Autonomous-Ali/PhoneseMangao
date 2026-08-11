@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
-import { withDbRetry } from '@/lib/db-retry';
+import { withReadRetry } from '@/lib/db-retry';
 import { getSession } from '@/lib/auth';
 import { getShopSettings } from '@/lib/settings';
 import { SHOP_NAME } from '@/lib/constants';
@@ -19,7 +19,7 @@ export default async function CheckoutPage() {
   // Guarded here rather than in middleware, which is scoped to admin paths.
   if (!session) redirect('/login?next=/checkout');
 
-  const [user, addresses, settings] = await withDbRetry(() =>
+  const [user, addresses, settings] = await withReadRetry(() =>
     Promise.all([
       db.user.findUnique({ where: { id: session.userId } }),
       db.address.findMany({

@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { withDbRetry } from '@/lib/db-retry';
+import { withReadRetry } from '@/lib/db-retry';
 
 /**
  * What the storefront is allowed to show.
@@ -65,7 +65,7 @@ function toShopVariant(variant: {
 }
 
 export async function getActiveCategories(): Promise<ShopCategory[]> {
-  const categories = await withDbRetry(() =>
+  const categories = await withReadRetry(() =>
     db.category.findMany({
       where: { isActive: true },
       include: { _count: { select: { products: { where: { isActive: true } } } } },
@@ -90,7 +90,7 @@ export async function getStorefrontProducts(
 ): Promise<ShopProduct[]> {
   const query = options.query?.trim();
 
-  const products = await withDbRetry(() =>
+  const products = await withReadRetry(() =>
     db.product.findMany({
       where: {
         ...VISIBLE,
@@ -127,7 +127,7 @@ export function hasStock(product: ShopProduct): boolean {
 }
 
 export async function getProductBySlug(slug: string): Promise<ShopProductDetail | null> {
-  const product = await withDbRetry(() =>
+  const product = await withReadRetry(() =>
     db.product.findFirst({
       where: { slug, ...VISIBLE },
       include: { category: true, variants: variantSelect },
@@ -149,7 +149,7 @@ export async function getProductBySlug(slug: string): Promise<ShopProductDetail 
 }
 
 export async function getCategoryBySlug(slug: string): Promise<ShopCategory | null> {
-  const category = await withDbRetry(() =>
+  const category = await withReadRetry(() =>
     db.category.findFirst({
       where: { slug, isActive: true },
       include: { _count: { select: { products: { where: { isActive: true } } } } },

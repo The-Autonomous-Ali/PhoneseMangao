@@ -1,6 +1,6 @@
 import { SlotType } from '@prisma/client';
 import { db } from '@/lib/db';
-import { withDbRetry } from '@/lib/db-retry';
+import { withReadRetry } from '@/lib/db-retry';
 
 export interface AdminSlot {
   id: string;
@@ -48,7 +48,7 @@ export async function getSlotWeek(fromDate: string): Promise<SlotWeek> {
   const from = calendarDay(fromDate);
   const to = new Date(from.getTime() + (DAYS - 1) * DAY_MS);
 
-  const slots = await withDbRetry(() =>
+  const slots = await withReadRetry(() =>
     db.deliverySlot.findMany({
       where: { date: { gte: from, lte: to } },
       orderBy: [{ date: 'asc' }, { slotType: 'asc' }],

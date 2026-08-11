@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { withDbRetry } from '@/lib/db-retry';
+import { withReadRetry } from '@/lib/db-retry';
 import { getSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -14,7 +14,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ id
   // Ownership is part of the query. Order ids are not secrets, and a fetch
   // followed by an `if` is one early return away from exposing somebody's
   // address, phone number and shopping habits.
-  const order = await withDbRetry(() =>
+  const order = await withReadRetry(() =>
     db.order.findFirst({
       where: { id, userId: session.userId },
       include: { items: true, slot: true, events: { orderBy: { createdAt: 'asc' } } },

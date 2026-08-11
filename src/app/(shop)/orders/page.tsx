@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
-import { withDbRetry } from '@/lib/db-retry';
+import { withReadRetry } from '@/lib/db-retry';
 import { getSession } from '@/lib/auth';
 import { buttonVariants } from '@/components/ui/button';
 import { formatRupees, formatSlotDate, formatSlotType } from '@/lib/format';
@@ -30,7 +30,7 @@ export default async function OrdersPage() {
   const session = await getSession();
   if (!session) redirect('/login?next=/orders');
 
-  const orders = await withDbRetry(() =>
+  const orders = await withReadRetry(() =>
     db.order.findMany({
       where: { userId: session.userId },
       orderBy: { placedAt: 'desc' },

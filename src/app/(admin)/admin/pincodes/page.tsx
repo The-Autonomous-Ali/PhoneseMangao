@@ -1,11 +1,11 @@
 import { db } from '@/lib/db';
-import { withDbRetry } from '@/lib/db-retry';
+import { withReadRetry } from '@/lib/db-retry';
 import { PincodeManager } from './pincode-manager';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminPincodesPage() {
-  const pincodes = await withDbRetry(() =>
+  const pincodes = await withReadRetry(() =>
     db.servicePincode.findMany({ orderBy: { pincode: 'asc' } })
   );
 

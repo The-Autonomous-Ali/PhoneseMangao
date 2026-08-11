@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { db } from '@/lib/db';
-import { withDbRetry } from '@/lib/db-retry';
+import { withReadRetry } from '@/lib/db-retry';
 import { getSession } from '@/lib/auth';
 import { SHOP_NAME } from '@/lib/constants';
 import { OrderDetailView, type OrderDetail } from './order-detail';
@@ -26,7 +26,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   if (!session) redirect(`/login?next=/orders/${id}`);
 
   // Ownership is part of the query, not a check afterwards.
-  const order = await withDbRetry(() =>
+  const order = await withReadRetry(() =>
     db.order.findFirst({
       where: { id, userId: session.userId },
       include: { items: true, slot: true },

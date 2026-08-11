@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
-import { withDbRetry } from '@/lib/db-retry';
+import { withReadRetry } from '@/lib/db-retry';
 import { buttonVariants } from '@/components/ui/button';
 import { EditProductForm } from './edit-product-form';
 import { VariantsEditor, type EditableVariant } from './variants-editor';
@@ -16,7 +16,7 @@ export default async function EditProductPage({
 }) {
   const { id } = await params;
 
-  const [product, categories] = await withDbRetry(() =>
+  const [product, categories] = await withReadRetry(() =>
     Promise.all([
       db.product.findUnique({
         where: { id },

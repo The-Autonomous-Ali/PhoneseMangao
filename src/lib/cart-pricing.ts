@@ -1,6 +1,6 @@
 import { Prisma, type UnitType } from '@prisma/client';
 import { db } from '@/lib/db';
-import { withDbRetry } from '@/lib/db-retry';
+import { withReadRetry } from '@/lib/db-retry';
 import type { CartItem } from '@/lib/cart';
 
 export type CartIssueReason = 'REMOVED' | 'UNAVAILABLE' | 'STOCK';
@@ -44,7 +44,7 @@ export interface PricedCart {
 export async function priceCart(items: CartItem[]): Promise<PricedCart> {
   if (items.length === 0) return { items: [], issues: [], itemsTotal: '0.00' };
 
-  const variants = await withDbRetry(() =>
+  const variants = await withReadRetry(() =>
     db.variant.findMany({
       where: { id: { in: items.map((item) => item.variantId) } },
       include: { product: { include: { category: true } } },

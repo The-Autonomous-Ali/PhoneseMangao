@@ -1,6 +1,6 @@
 import { OrderStatus, PaymentMethod, Prisma, SlotType } from '@prisma/client';
 import { db } from '@/lib/db';
-import { withDbRetry } from '@/lib/db-retry';
+import { withReadRetry } from '@/lib/db-retry';
 
 /**
  * Below this, a variant is worth warning about. A constant rather than a
@@ -41,14 +41,14 @@ export async function getDashboard(date: string): Promise<DashboardSummary> {
   const dayStart = calendarDay(date);
   const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
 
-  const deliveredOrders = await withDbRetry(() =>
+  const deliveredOrders = await withReadRetry(() =>
     db.order.findMany({
       where: { deliveredAt: { gte: dayStart, lt: dayEnd } },
       select: { paymentMethod: true, finalTotal: true, grandTotal: true },
     })
   );
 
-  const upcomingOrders = await withDbRetry(() =>
+  const upcomingOrders = await withReadRetry(() =>
     db.order.findMany({
       where: {
         status: { in: OPEN_STATUSES },
@@ -58,7 +58,7 @@ export async function getDashboard(date: string): Promise<DashboardSummary> {
     })
   );
 
-  const openCounts = await withDbRetry(() =>
+  const openCounts = await withReadRetry(() =>
     db.order.groupBy({
       by: ['status'],
       where: { status: { in: OPEN_STATUSES } },
@@ -66,7 +66,7 @@ export async function getDashboard(date: string): Promise<DashboardSummary> {
     })
   );
 
-  const lowStock = await withDbRetry(() =>
+  const lowStock = await withReadRetry(() =>
     db.variant.findMany({
       // `not: null` matters as much as the threshold. A null stockQty means the
       // shop does not track that line, which is normal for loose produce, and

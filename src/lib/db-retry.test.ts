@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Prisma } from '@prisma/client';
-import { isDbConnectionError, isRetryableDbError, withDbRetry } from './db-retry';
+import { isDbConnectionError, isRetryableDbError, withDbRetry, withReadRetry } from './db-retry';
 
 function knownError(code: string) {
   return new Prisma.PrismaClientKnownRequestError('boom', { code, clientVersion: '6.19.3' });
@@ -81,6 +81,62 @@ describe('withDbRetry', () => {
   it('does not retry P1017 through the wrapper, because the write may have landed', async () => {
     const op = vi.fn().mockRejectedValue(knownError('P1017'));
     await expect(withDbRetry(op, noDelay)).rejects.toBeDefined();
+    expect(op).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('isRetryableDbError — read-only', () => {
+  it('adds P1017 to what may be retried', () => {
+    // The reason P1017 is excluded by default is that the server can close a
+    // connection *after* a statement was sent, so a retry could duplicate a
+    // write. A read has no write to duplicate.
+    expect(isRetryableDbError(knownError('P1017'), { readOnly: true })).toBe(true);
+  });
+
+  it('still retries the codes that were already safe', () => {
+    expect(isRetryableDbError(knownError('P1001'), { readOnly: true })).toBe(true);
+    expect(isRetryableDbError(initError(), { readOnly: true })).toBe(true);
+  });
+
+  it('does not widen the net to ordinary query errors', () => {
+    // Read-only says the statement is safe to repeat, not that every failure is
+    // worth repeating. A malformed query fails identically the second time.
+    expect(isRetryableDbError(knownError('P2002'), { readOnly: true })).toBe(false);
+    expect(isRetryableDbError(knownError('P2025'), { readOnly: true })).toBe(false);
+    expect(isRetryableDbError(new Error('nope'), { readOnly: true })).toBe(false);
+  });
+});
+
+describe('withReadRetry', () => {
+  const noDelay = { delaysMs: [0, 0] };
+
+  it('recovers from a dropped connection instead of surfacing a 500', async () => {
+    // The exact failure a customer hit on /orders: Neon closed an idle
+    // connection, and the page fell over on a query that was safe to repeat.
+    const op = vi.fn().mockRejectedValueOnce(knownError('P1017')).mockResolvedValue('rows');
+
+    await expect(withReadRetry(op, noDelay)).resolves.toBe('rows');
+    expect(op).toHaveBeenCalledTimes(2);
+  });
+
+  it('still gives up eventually rather than hammering a dead database', async () => {
+    const op = vi.fn().mockRejectedValue(knownError('P1017'));
+
+    await expect(withReadRetry(op, noDelay)).rejects.toBeDefined();
+    expect(op).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not retry a genuine query error', async () => {
+    const op = vi.fn().mockRejectedValue(knownError('P2002'));
+
+    await expect(withReadRetry(op, noDelay)).rejects.toBeDefined();
+    expect(op).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns the value untouched when nothing goes wrong', async () => {
+    const op = vi.fn().mockResolvedValue({ id: 'x' });
+
+    await expect(withReadRetry(op, noDelay)).resolves.toEqual({ id: 'x' });
     expect(op).toHaveBeenCalledTimes(1);
   });
 });

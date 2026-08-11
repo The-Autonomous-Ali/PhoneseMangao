@@ -1,12 +1,12 @@
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
-import { withDbRetry } from '@/lib/db-retry';
+import { withReadRetry } from '@/lib/db-retry';
 import { NewProductForm } from './new-product-form';
 
 export const dynamic = 'force-dynamic';
 
 export default async function NewProductPage() {
-  const categories = await withDbRetry(() =>
+  const categories = await withReadRetry(() =>
     db.category.findMany({ orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] })
   );
 

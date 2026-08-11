@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import { db } from '@/lib/db';
-import { withDbRetry } from '@/lib/db-retry';
+import { withReadRetry } from '@/lib/db-retry';
 import { buttonVariants } from '@/components/ui/button';
 import { CatalogList, type CatalogProduct } from './catalog-list';
 
 export const dynamic = 'force-dynamic';
 
 export default async function CatalogPage() {
-  const [products, categories] = await withDbRetry(() =>
+  const [products, categories] = await withReadRetry(() =>
     Promise.all([
       db.product.findMany({
         include: { variants: { orderBy: { unitValue: 'asc' } }, category: true },

@@ -1,6 +1,6 @@
 import { PaymentStatus } from '@prisma/client';
 import { db } from '@/lib/db';
-import { withDbRetry } from '@/lib/db-retry';
+import { withReadRetry } from '@/lib/db-retry';
 import { sendOwnerAlert } from '@/lib/services/notify';
 import { formatRupees, formatSlotDate, formatSlotType } from '@/lib/format';
 
@@ -16,7 +16,7 @@ import { formatRupees, formatSlotDate, formatSlotType } from '@/lib/format';
  */
 export async function notifyOrderConfirmed(orderId: string): Promise<void> {
   try {
-    const order = await withDbRetry(() =>
+    const order = await withReadRetry(() =>
       db.order.findUnique({
         where: { id: orderId },
         include: {

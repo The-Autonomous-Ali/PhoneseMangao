@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
-import { withDbRetry } from '@/lib/db-retry';
+import { withDbRetry, withReadRetry } from '@/lib/db-retry';
 
 /**
  * Shop settings, with the values used when a row is missing.
@@ -104,7 +104,10 @@ function readRadius(raw: unknown, fallback: number): number {
 }
 
 export async function getShopSettings(): Promise<ShopSettings> {
-  const rows = await withDbRetry(() => db.setting.findMany());
+  // Read-retrying, unlike the writer below. Every page render reads settings,
+  // so a dropped connection here is a 500 on the storefront rather than a
+  // failed save the owner can simply repeat.
+  const rows = await withReadRetry(() => db.setting.findMany());
   const byKey = new Map(rows.map((row) => [row.key, row.value]));
 
   return {

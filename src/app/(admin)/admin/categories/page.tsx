@@ -1,11 +1,11 @@
 import { db } from '@/lib/db';
-import { withDbRetry } from '@/lib/db-retry';
+import { withReadRetry } from '@/lib/db-retry';
 import { CategoriesManager, type CategoryRow } from './categories-manager';
 
 export const dynamic = 'force-dynamic';
 
 export default async function CategoriesPage() {
-  const categories = await withDbRetry(() =>
+  const categories = await withReadRetry(() =>
     db.category.findMany({
       include: { _count: { select: { products: true } } },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],

@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { withDbRetry } from '@/lib/db-retry';
+import { withReadRetry } from '@/lib/db-retry';
 import { getShopSettings } from '@/lib/settings';
 import { distanceKm, isValidLatitude, isValidLongitude } from '@/lib/geo';
 
@@ -63,7 +63,7 @@ export async function isServiceable(input: {
 
   // The override, checked first so it can beat the radius in both directions.
   if (isValidPincode(pincode)) {
-    const hit = await withDbRetry(() =>
+    const hit = await withReadRetry(() =>
       db.servicePincode.findFirst({
         where: { pincode, isActive: true },
         select: { area: true },
