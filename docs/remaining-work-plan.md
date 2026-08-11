@@ -167,9 +167,10 @@ Worth knowing: settlement writes **strings into `Decimal` columns**, and every
 unit test mocks Prisma, so that had never actually been exercised. It works.
 That was the single largest untested assumption in the codebase.
 
-Three things came out of it, none of which any test would have caught.
+Three things came out of it, none of which any test would have caught. The
+first is fixed; the other two are still open.
 
-### 1. A cash order never reduces stock · *the real one*
+### 1. ~~A cash order never reduces stock~~ · **fixed** (`3d5928d`)
 
 `stockQty` is decremented in exactly one place — the Razorpay webhook
 (`webhooks/razorpay/route.ts:105`), on `payment.captured`. A COD order
@@ -184,9 +185,19 @@ untouched count, and the shop oversells.
 It does not bite loose produce, which carries `stockQty: null` and is not
 tracked. It bites the packed goods that are.
 
-**Not fixed, because where the decrement belongs is a decision.** Reserving at
-CONFIRMED prevents overselling but consumes stock on an order that may still be
-cancelled; taking it at DELIVERED is accurate but too late to prevent anything.
+**Fixed at CONFIRMED**, which is the point the online path already took stock —
+`payment.captured` and OTP confirmation are the same moment in an order's life,
+reached by different routes. Taking it at DELIVERED was the alternative and
+would have prevented nothing, which was the whole complaint.
+
+Fixing it exposed a second hole in the same area: **no cancel path returned
+stock at all**, so a paid online order that was then cancelled leaked its
+inventory permanently. Both cancel paths now return it, guarded on the status
+being cancelled *from*.
+
+`src/lib/stock.ts` holds `takeStock`, `returnStock` and `hasTakenStock`.
+Verified against the live database as well as in tests: 48 → 40 on
+confirmation, 40 → 48 on cancellation, and a second cancel left it at 48.
 
 ### 2. A dropped database connection is a 500 on a read
 
@@ -223,10 +234,12 @@ both, or ask for a name at checkout.
 - The dev database's six test orders were deleted when `OrderItem.unitValue`
   was added, and the slot counters reset with them. A "Home" address on the
   seeded admin and one variant at `stockQty: 48` remain.
-- **The end-to-end pass left one delivered test order in the dev database**
-  (`PM260811-3EKT`) and one test customer (`+919876500001`). Harmless, and
-  useful as evidence, but clear both before any demo — a delivered order counts
-  toward the dashboard's revenue figure.
+- **The end-to-end passes left test data in the dev database**: a delivered
+  order (`PM260811-3EKT`), a cancelled one (`PM260811-2B78`), and two test
+  customers (`+919876500001`, `+919876500002`). Harmless, and useful as
+  evidence, but clear them before any demo — the delivered one counts toward
+  the dashboard's revenue figure. `PM260811-3EKT` was confirmed before the
+  stock fix, so its stock was never taken.
 - **The admin screens were verified as rendering, not as clicking.** Every
   admin page returns 200 with a session and 307 without one, and the query layer
   was run against real data. The Server Actions behind the buttons were
