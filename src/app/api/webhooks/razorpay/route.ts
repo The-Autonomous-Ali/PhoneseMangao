@@ -3,6 +3,7 @@ import { OrderStatus, PaymentStatus } from '@prisma/client';
 import { db } from '@/lib/db';
 import { withDbRetry } from '@/lib/db-retry';
 import { verifyWebhookSignature } from '@/lib/razorpay';
+import { notifyOrderConfirmed } from '@/lib/notify-order';
 
 export const dynamic = 'force-dynamic';
 
@@ -106,6 +107,11 @@ export async function POST(request: NextRequest) {
         }
       })
     );
+
+    // Outside the transaction on purpose: inside it, a slow Meta would hold a
+    // database transaction open across a call to a third party. It never
+    // throws, so it cannot make Razorpay retry a webhook already handled.
+    await notifyOrderConfirmed(order.id);
 
     return NextResponse.json({ ok: true });
   }

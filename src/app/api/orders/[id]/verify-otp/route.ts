@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { withDbRetry } from '@/lib/db-retry';
 import { getSession } from '@/lib/auth';
 import { consumeOtp } from '@/lib/otp';
+import { notifyOrderConfirmed } from '@/lib/notify-order';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,6 +77,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       return row;
     })
   );
+
+  // After the commit. It never throws, so a messaging outage cannot turn a
+  // confirmed order into an error page.
+  await notifyOrderConfirmed(id);
 
   return NextResponse.json({ ok: true, status: updated.status });
 }

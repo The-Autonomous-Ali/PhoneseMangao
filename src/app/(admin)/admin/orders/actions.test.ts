@@ -19,12 +19,14 @@ vi.mock('@/lib/admin-auth', async () => {
 });
 
 vi.mock('@/lib/slots', () => ({ releaseSlot: vi.fn() }));
+vi.mock('@/lib/notify-order', () => ({ notifyOrderConfirmed: vi.fn() }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 import { Prisma, OrderStatus, PaymentMethod, PaymentStatus, UnitType } from '@prisma/client';
 import { db } from '@/lib/db';
 import { requireAdmin, NotAdminError } from '@/lib/admin-auth';
 import { releaseSlot } from '@/lib/slots';
+import { notifyOrderConfirmed } from '@/lib/notify-order';
 import { advanceOrderStatus, cancelOrder, settleAndDeliver } from './actions';
 
 function orderRow(overrides: Record<string, unknown> = {}) {
@@ -55,6 +57,7 @@ function orderRow(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.mocked(requireAdmin).mockReset().mockResolvedValue({ userId: 'admin_1', role: 'ADMIN' });
   vi.mocked(releaseSlot).mockReset();
+  vi.mocked(notifyOrderConfirmed).mockReset().mockResolvedValue(undefined);
   vi.mocked(db.order.findUnique).mockReset();
   tx.order.updateMany.mockReset().mockResolvedValue({ count: 1 });
   tx.order.update.mockReset();
@@ -104,6 +107,27 @@ describe('advanceOrderStatus', () => {
       error: 'This order was already updated. Refresh to see where it is.',
     });
     expect(tx.orderEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('alerts the owner when an order becomes real', async () => {
+    await advanceOrderStatus('o_1', OrderStatus.PENDING);
+
+    expect(notifyOrderConfirmed).toHaveBeenCalledWith('o_1');
+  });
+
+  it('stays quiet on every other step', async () => {
+    // The owner does not need a message when he himself clicks Packed.
+    await advanceOrderStatus('o_1', OrderStatus.CONFIRMED);
+
+    expect(notifyOrderConfirmed).not.toHaveBeenCalled();
+  });
+
+  it('does not alert on a transition that lost its race', async () => {
+    tx.order.updateMany.mockResolvedValue({ count: 0 });
+
+    await advanceOrderStatus('o_1', OrderStatus.PENDING);
+
+    expect(notifyOrderConfirmed).not.toHaveBeenCalled();
   });
 
   it('sends a delivery to settlement rather than writing DELIVERED directly', async () => {

@@ -10,6 +10,7 @@ import { releaseSlot } from '@/lib/slots';
 import { toActionError, type ActionResult } from '@/lib/actions';
 import { nextStatus, canCancel } from '@/lib/admin/order-status';
 import { settleLines, finalTotalFor, type SettleableLine } from '@/lib/admin/settlement';
+import { notifyOrderConfirmed } from '@/lib/notify-order';
 
 /** Shown whenever a conditional write matches nothing. */
 const LOST_RACE = 'This order was already updated. Refresh to see where it is.';
@@ -61,6 +62,10 @@ export async function advanceOrderStatus(
     );
 
     if (!moved) return { ok: false, error: LOST_RACE };
+
+    // Only on the transition that means "a new order is real". The owner does
+    // not need a message when he himself clicks Packed.
+    if (to === OrderStatus.CONFIRMED) await notifyOrderConfirmed(orderId);
 
     refresh();
     return { ok: true };

@@ -9,6 +9,8 @@ const tx = {
   variant: { updateMany: vi.fn() },
 };
 
+vi.mock('@/lib/notify-order', () => ({ notifyOrderConfirmed: vi.fn() }));
+
 vi.mock('@/lib/db', () => ({
   db: {
     order: { findUnique: vi.fn() },
@@ -18,6 +20,7 @@ vi.mock('@/lib/db', () => ({
 
 import { db } from '@/lib/db';
 import { resetEnvCache } from '@/lib/env';
+import { notifyOrderConfirmed } from '@/lib/notify-order';
 import { POST as webhook } from './route';
 
 const ORIGINAL = { ...process.env };
@@ -156,6 +159,16 @@ describe('razorpay webhook — payment captured', () => {
 
     const { where } = tx.variant.updateMany.mock.calls[0][0];
     expect(where.stockQty).toEqual({ not: null });
+  });
+
+  it('alerts the owner once the payment is in', async () => {
+    // Called outside the transaction. notifyOrderConfirmed swallows its own
+    // failures — proven in notify-order.test.ts — so there is no case here
+    // where a messaging outage produces the non-2xx that would make Razorpay
+    // redeliver a payment already processed.
+    await webhook(buildRequest(capturedBody()));
+
+    expect(notifyOrderConfirmed).toHaveBeenCalledWith(ORDER.id);
   });
 });
 
