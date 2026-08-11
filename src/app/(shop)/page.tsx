@@ -100,7 +100,12 @@ export default async function HomePage() {
             Morning · Afternoon · Evening delivery
           </div>
 
-          <h1 className="mt-4.5 text-[clamp(46px,6.2vw,82px)] leading-[0.97] tracking-[-0.01em] text-[#f5edde] [text-shadow:0_2px_44px_rgba(0,0,0,0.55)]">
+          {/* The ceiling is well below the mockup's 82px. That figure was set
+              against a sans-serif placeholder; Marcellus is appreciably wider,
+              and at 82px "Hand-picked." breaks at its hyphen in a two-column
+              layout. `text-nowrap` on each line keeps the three-line shape the
+              design is built around whatever the face does. */}
+          <h1 className="mt-4.5 text-[clamp(38px,4.6vw,62px)] leading-[1.02] tracking-[-0.01em] text-nowrap text-[#f5edde] [text-shadow:0_2px_44px_rgba(0,0,0,0.55)]">
             Sun-ripened.
             <br />
             Hand-picked.
@@ -136,8 +141,11 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <div className="relative hidden aspect-[4/3] overflow-hidden rounded-2xl border border-border md:block">
-          {products[0]?.imageUrl ? (
+        {/* Only shown when there is a real photograph to show. An empty framed
+            rectangle beside the headline reads as a broken image, which is a
+            worse first impression than a single-column hero. */}
+        {products[0]?.imageUrl && (
+          <div className="relative hidden aspect-[4/3] overflow-hidden rounded-2xl border border-border md:block">
             <Image
               src={products[0].imageUrl}
               alt=""
@@ -146,12 +154,8 @@ export default async function HomePage() {
               priority
               className="object-cover"
             />
-          ) : (
-            <div className="flex size-full items-center justify-center bg-[#182e24] text-center font-heading text-2xl text-muted-foreground">
-              {SHOP_NAME}
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </section>
 
       <section id="shop" className="scroll-mt-20 pt-12">

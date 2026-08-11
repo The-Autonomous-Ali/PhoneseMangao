@@ -97,6 +97,7 @@ export function ProductCard({ product }: { product: ShopProduct }) {
           </div>
 
           <AddToCart
+            compact
             variantId={variant.id}
             disabled={soldOut}
             label={`${product.name} ${variant.label}`}

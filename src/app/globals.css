@@ -148,11 +148,16 @@
     @apply font-sans;
   }
 
-  /* Headings carry the display face. Set once here so no page has to remember. */
+  /* Headings carry the display face. Set once here so no page has to remember.
+     Deliberately `--font-marcellus` and not `--font-heading`: the latter is
+     declared inside `@theme inline`, which tells Tailwind to inline the value
+     into its utilities rather than emit a custom property, so `var(--font-heading)`
+     resolves to nothing in hand-written CSS like this. `--font-marcellus` is
+     the real variable, put on <body> by next/font. */
   h1,
   h2,
   h3 {
-    font-family: var(--font-heading);
+    font-family: var(--font-marcellus), Georgia, serif;
     font-weight: 400;
     letter-spacing: 0.01em;
   }
