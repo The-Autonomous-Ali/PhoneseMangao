@@ -102,11 +102,12 @@ this list is now the only record.
 - **Task 7** — admin phone from config. `prisma/seed.ts` still carries
   `TODO: replace with the real admin phone number before go-live` and a
   hardcoded `+911234567890`
-- **Task 8** — **CI workflow. Now the highest-value item left.** `tsc --noEmit`
-  went red while the suite stayed green **four separate times** across 6A, 6B
-  and the radius work — every time from a test fixture that had not been widened
-  along with a type. Nothing but CI catches that reliably. The order-number test
-  that failed ~11% of runs is fixed (`9a41722`), so CI would start honest
+- ~~**Task 8** — **CI workflow**~~ **Done** (`b2bdd02`).
+  `.github/workflows/ci.yml` runs lint → typecheck → test → build on every push
+  and on PRs into master, on Node 22 to match the Dockerfile. It exists because
+  `tsc --noEmit` went red while the suite stayed green four separate times
+  across 6A, 6B and the radius work. **It has not yet run** — the branch has not
+  been pushed since it was added, so the first run is still unobserved
 - **Task 9** — client details checklist
 - **Task 10** — **end-to-end verification pass. Nothing has been run against a
   live database.** Every phase from 6A on is proven by tests, types, lint and a
