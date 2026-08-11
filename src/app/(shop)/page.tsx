@@ -2,8 +2,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getActiveCategories, getStorefrontProducts } from '@/lib/shop-queries';
-import { getShopSettings } from '@/lib/settings';
+import { getShopSettings, type ShopSettings } from '@/lib/settings';
 import { ProductCard } from '@/components/shop/product-card';
+import { formatRupees } from '@/lib/format';
 import { SHOP_NAME, SHOP_TAGLINE } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic';
@@ -14,6 +15,49 @@ export const metadata: Metadata = {
 };
 
 const FEATURED_COUNT = 8;
+
+/**
+ * The four promises at the foot of the home page.
+ *
+ * Every one of them is something the shop actually does, and the two money
+ * figures come from settings rather than being written into the copy. A claim
+ * on a home page that quietly stops being true — because the owner raised the
+ * free-delivery threshold in the admin and nobody remembered this paragraph —
+ * is worse than making no claim at all.
+ */
+function TrustBand({ settings }: { settings: ShopSettings }) {
+  const promises = [
+    {
+      k: 'Three slots daily',
+      v: 'Morning, afternoon or evening. You pick the window; we work around it.',
+    },
+    {
+      k: 'Weighed at your door',
+      v: 'Loose produce is settled on what is actually delivered, so you never pay for weight you did not get.',
+    },
+    {
+      k: 'Cash or online',
+      v: 'Pay the driver or pay on your phone. Cash orders are confirmed by a code sent to your number.',
+    },
+    {
+      k: `Free over ${formatRupees(settings.freeDeliveryAbove)}`,
+      v: `Delivery is ${formatRupees(settings.deliveryFee)} below that. Minimum order ${formatRupees(settings.minOrderValue)}.`,
+    },
+  ];
+
+  return (
+    <section className="pb-12">
+      <div className="grid gap-6 rounded-[22px] bg-[#152a20] px-8 py-9 sm:grid-cols-2 lg:grid-cols-4">
+        {promises.map((promise) => (
+          <div key={promise.k}>
+            <div className="font-heading text-[26px] text-[#d4b15e]">{promise.k}</div>
+            <p className="mt-2 text-sm leading-relaxed text-[#efe7d3]">{promise.v}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 /** A small caps-and-rule heading, used above each band on the page. */
 function SectionHeading({ children, hint }: { children: React.ReactNode; hint?: string }) {
@@ -156,6 +200,8 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      <TrustBand settings={settings} />
     </div>
   );
 }
