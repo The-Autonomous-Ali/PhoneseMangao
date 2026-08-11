@@ -86,13 +86,20 @@ export async function getActiveCategories(): Promise<ShopCategory[]> {
 }
 
 export async function getStorefrontProducts(
-  options: { categorySlug?: string; take?: number } = {}
+  options: { categorySlug?: string; query?: string; take?: number } = {}
 ): Promise<ShopProduct[]> {
+  const query = options.query?.trim();
+
   const products = await withDbRetry(() =>
     db.product.findMany({
       where: {
         ...VISIBLE,
         ...(options.categorySlug ? { category: { isActive: true, slug: options.categorySlug } } : {}),
+        // Name only, case-insensitive. Deliberately not a full-text index: the
+        // catalogue is a few hundred rows a shopkeeper types himself, and
+        // somebody searching "tomato" wants the tomatoes, not every description
+        // that mentions them.
+        ...(query ? { name: { contains: query, mode: 'insensitive' as const } } : {}),
       },
       include: { category: true, variants: variantSelect },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
