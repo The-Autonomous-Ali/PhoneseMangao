@@ -103,7 +103,7 @@ function AddressForm({ onCreated }: { onCreated: (address: Address) => void }) {
         <Input id="label" name="label" placeholder="Home" maxLength={30} />
       </div>
       {error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {error}
         </p>
       )}
@@ -231,7 +231,7 @@ export function CheckoutForm({
 
   if (items.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed p-10 text-center">
+      <div className="rounded-2xl border border-dashed border-border p-10 text-center">
         <p className="text-sm text-muted-foreground">Your basket is empty.</p>
         <Link href="/" className={buttonVariants({ className: 'mt-4' })}>
           Start shopping
@@ -353,7 +353,7 @@ export function CheckoutForm({
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {quote?.issues.map((issue) => (
-            <p key={issue.variantId} className="text-amber-700">
+            <p key={issue.variantId} className="text-gold">
               {issue.message}
             </p>
           ))}
@@ -374,14 +374,14 @@ export function CheckoutForm({
           </div>
 
           {quote && !quote.meetsMinimum && (
-            <p className="rounded-md bg-amber-50 px-3 py-2 text-amber-800">
+            <p className="rounded-md bg-gold/10 px-3 py-2 text-gold">
               Minimum order is {formatRupees(minOrderValue)}. Add{' '}
               {formatRupees(quote.shortfall)} more to check out.
             </p>
           )}
 
           {!shopOpen && (
-            <p className="rounded-md bg-amber-50 px-3 py-2 text-amber-800">
+            <p className="rounded-md bg-gold/10 px-3 py-2 text-gold">
               The shop is closed right now.
             </p>
           )}
@@ -423,7 +423,7 @@ export function CheckoutForm({
           </div>
 
           {error && (
-            <p className="rounded-md bg-red-50 px-3 py-2 text-red-600" role="alert">
+            <p className="rounded-md bg-destructive/10 px-3 py-2 text-destructive" role="alert">
               {error}
             </p>
           )}

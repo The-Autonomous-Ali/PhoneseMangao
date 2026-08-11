@@ -51,7 +51,7 @@ export function NewProductForm({ categories }: { categories: { id: string; name:
       </Card>
 
       {!state.ok && state.error && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
+        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
           {state.error}
         </p>
       )}

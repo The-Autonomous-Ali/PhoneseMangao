@@ -72,7 +72,7 @@ function ProductCard({ product, onError }: { product: CatalogProduct; onError: (
           </div>
 
           {hiddenByCategory && (
-            <p className="mt-0.5 text-xs text-amber-600">
+            <p className="mt-0.5 text-xs text-gold">
               Hidden — the {product.categoryName} category is switched off
             </p>
           )}
@@ -92,7 +92,7 @@ function ProductCard({ product, onError }: { product: CatalogProduct; onError: (
                 <span
                   className={cn(
                     'w-24 shrink-0 text-xs',
-                    variant.isAvailable ? 'text-muted-foreground' : 'text-red-600'
+                    variant.isAvailable ? 'text-muted-foreground' : 'text-destructive'
                   )}
                 >
                   {variant.isAvailable ? 'Available' : 'Sold out'}
@@ -193,7 +193,7 @@ export function CatalogList({
       </div>
 
       {error && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
+        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
           {error}
         </p>
       )}

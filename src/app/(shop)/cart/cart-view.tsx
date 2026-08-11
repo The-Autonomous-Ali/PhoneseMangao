@@ -85,10 +85,13 @@ export function CartView() {
 
   if (items.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed p-10 text-center">
-        <p className="text-sm text-muted-foreground">Your basket is empty.</p>
-        <Link href="/" className={buttonVariants({ className: 'mt-4' })}>
-          Start shopping
+      <div className="rounded-[18px] border border-[#294c3b] bg-[#182e24] px-5 py-16 text-center">
+        <p className="text-[19px] text-[#a9b7ac]">Your cart is empty.</p>
+        <Link
+          href="/"
+          className="mt-5 inline-block rounded-full bg-gold px-7 py-3.5 text-[15px] font-semibold text-[#132019] transition-colors hover:bg-gold-hover"
+        >
+          Browse products
         </Link>
       </div>
     );
@@ -97,22 +100,22 @@ export function CartView() {
   return (
     <div className="space-y-6">
       {error && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
+        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
           {error}
         </p>
       )}
 
       {priced && priced.issues.length > 0 && (
-        <ul className="space-y-1 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <ul className="space-y-1 rounded-md bg-gold/10 px-3 py-2 text-sm text-gold">
           {priced.issues.map((issue) => (
             <li key={`${issue.variantId}-${issue.reason}`}>{issue.message}</li>
           ))}
         </ul>
       )}
 
-      <ul className="divide-y rounded-xl border">
+      <ul className="divide-y divide-border rounded-2xl border border-border bg-card">
         {priced?.items.map((line) => (
-          <li key={line.variantId} className="flex items-center gap-3 p-3">
+          <li key={line.variantId} className="flex items-center gap-3.5 p-3.5">
             {line.imageUrl ? (
               <Image
                 src={line.imageUrl}
@@ -173,7 +176,7 @@ export function CartView() {
         ))}
       </ul>
 
-      <div className="space-y-3 rounded-xl border p-4">
+      <div className="space-y-3 rounded-2xl border border-border bg-card p-5">
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Items</span>
           <span className="tabular-nums">{formatRupees(priced?.itemsTotal ?? '0.00')}</span>
@@ -182,23 +185,25 @@ export function CartView() {
           <span className="text-muted-foreground">
             Delivery{pincode ? ` to ${pincode}` : ''}
           </span>
-          <span className="tabular-nums">
+          <span className={cn('tabular-nums', priced?.deliveryWaived && 'text-gold')}>
             {priced?.deliveryWaived ? 'Free' : formatRupees(priced?.deliveryFee ?? '0.00')}
           </span>
         </div>
-        <div className="flex justify-between border-t pt-3 text-lg font-semibold">
-          <span>Total</span>
-          <span className="tabular-nums">{formatRupees(priced?.grandTotal ?? '0.00')}</span>
+        <div className="flex items-baseline justify-between border-t border-border pt-3">
+          <span className="font-heading text-lg">Total</span>
+          <span className="text-2xl font-bold text-gold tabular-nums">
+            {formatRupees(priced?.grandTotal ?? '0.00')}
+          </span>
         </div>
 
         {priced && !priced.meetsMinimum && (
-          <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <p className="rounded-md bg-gold/10 px-3 py-2 text-sm text-gold">
             Add {formatRupees(priced.shortfall)} more to reach the minimum order.
           </p>
         )}
 
         {priced && !priced.shopOpen && (
-          <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <p className="rounded-md bg-gold/10 px-3 py-2 text-sm text-gold">
             The shop is closed right now.
           </p>
         )}

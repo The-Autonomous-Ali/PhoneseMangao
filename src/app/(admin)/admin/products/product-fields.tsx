@@ -12,7 +12,7 @@ export interface FieldErrors {
 
 export function FieldError({ errors, name }: { errors?: FieldErrors; name: string }) {
   if (!errors?.[name]) return null;
-  return <p className="text-sm text-red-600">{errors[name]}</p>;
+  return <p className="text-sm text-destructive">{errors[name]}</p>;
 }
 
 interface ProductDefaults {

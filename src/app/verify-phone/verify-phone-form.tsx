@@ -15,9 +15,9 @@ type Step = 'phone' | 'code';
  * the customer must still be able to place an order.
  */
 function CallTheShop({ number }: { number?: string }) {
-  if (!number) return <p className="text-sm text-red-600">Please contact the shop to continue.</p>;
+  if (!number) return <p className="text-sm text-destructive">Please contact the shop to continue.</p>;
   return (
-    <p className="text-sm text-red-600">
+    <p className="text-sm text-destructive">
       We could not send the code. Call the shop on{' '}
       <a href={`tel:${number}`} className="font-medium underline">
         {number}
@@ -106,7 +106,7 @@ export function VerifyPhoneForm({ shopNumber }: { shopNumber?: string }) {
                   required
                 />
               </div>
-              {error && <p className="text-sm text-red-600">{error}</p>}
+              {error && <p className="text-sm text-destructive">{error}</p>}
               {sendFailed && <CallTheShop number={shopNumber} />}
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Sending...' : 'Send code on WhatsApp'}
@@ -129,7 +129,7 @@ export function VerifyPhoneForm({ shopNumber }: { shopNumber?: string }) {
                   required
                 />
               </div>
-              {error && <p className="text-sm text-red-600">{error}</p>}
+              {error && <p className="text-sm text-destructive">{error}</p>}
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Verifying...' : 'Verify'}
               </Button>

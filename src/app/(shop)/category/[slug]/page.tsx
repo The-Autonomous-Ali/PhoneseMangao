@@ -35,23 +35,36 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
   if (!category) notFound();
 
   return (
-    <div className="space-y-6">
-      <nav className="text-sm text-muted-foreground">
-        <Link href="/" className="hover:underline">
+    <div className="animate-om-fade">
+      <nav className="mb-2 text-[13px] text-muted-foreground">
+        <Link href="/" className="hover:text-gold">
           Home
         </Link>
         <span className="mx-1.5">/</span>
-        <span className="text-foreground">{category.name}</span>
+        <span>{category.name}</span>
       </nav>
 
-      <h1 className="text-2xl font-semibold">{category.name}</h1>
+      <h1 className="text-4xl">{category.name}</h1>
+      <div className="mt-1 text-sm text-[#a9b7ac]">
+        {products.length} {products.length === 1 ? 'item' : 'items'} in this aisle
+      </div>
+      <div className="mt-3 mb-8 h-px w-14 bg-gold" />
 
       {products.length === 0 ? (
-        <p className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
-          Nothing in this section today.
-        </p>
+        <div className="rounded-2xl border border-dashed border-border p-12 text-center">
+          <p className="font-heading text-xl">Nothing in this section today.</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Stock changes every morning — worth looking again tomorrow.
+          </p>
+          <Link
+            href="/"
+            className="mt-5 inline-block rounded-full bg-gold px-6 py-3 text-sm font-semibold text-[#132019] transition-colors hover:bg-gold-hover"
+          >
+            Back to the shop
+          </Link>
+        </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {products.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}

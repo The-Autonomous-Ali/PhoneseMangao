@@ -52,11 +52,11 @@ function VariantRow({ variant, onError }: { variant: EditableVariant; onError: (
         <form action={formAction} className="mt-4 space-y-4 border-t pt-4">
           <VariantFields defaults={variant} errors={state.ok ? undefined : state.fieldErrors} />
           {!state.ok && state.error && (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-destructive" role="alert">
               {state.error}
             </p>
           )}
-          {state.ok && <p className="text-sm text-green-700">Saved.</p>}
+          {state.ok && <p className="text-sm text-emerald-300">Saved.</p>}
           <Button type="submit" size="sm" disabled={pending}>
             {pending ? 'Saving...' : 'Save pack size'}
           </Button>
@@ -82,7 +82,7 @@ function AddVariantForm({ productId }: { productId: string }) {
     <form action={formAction} className="space-y-4 rounded-lg border border-dashed p-4">
       <VariantFields errors={state.ok ? undefined : state.fieldErrors} />
       {!state.ok && state.error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {state.error}
         </p>
       )}
@@ -114,7 +114,7 @@ export function VariantsEditor({
       </CardHeader>
       <CardContent className="space-y-4">
         {error && (
-          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
+          <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
             {error}
           </p>
         )}

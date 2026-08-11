@@ -69,7 +69,7 @@ function CategoryItem({ category, onError }: { category: CategoryRow; onError: (
       {!category.isActive && category.productCount > 0 && (
         // Worth saying plainly: the products are untouched, so switching the
         // category back on restores the whole section exactly as it was.
-        <p className="mt-2 text-xs text-amber-600">
+        <p className="mt-2 text-xs text-gold">
           Its {category.productCount} product{category.productCount === 1 ? ' is' : 's are'} hidden
           from customers too. Switching this back on restores them.
         </p>
@@ -103,11 +103,11 @@ function CategoryItem({ category, onError }: { category: CategoryRow; onError: (
             </div>
           </div>
           {!state.ok && state.error && (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-destructive" role="alert">
               {state.error}
             </p>
           )}
-          {state.ok && <p className="text-sm text-green-700">Saved.</p>}
+          {state.ok && <p className="text-sm text-emerald-300">Saved.</p>}
           <Button type="submit" size="sm" disabled={pending}>
             {pending ? 'Saving...' : 'Save'}
           </Button>
@@ -138,7 +138,7 @@ export function CategoriesManager({ categories }: { categories: CategoryRow[] })
             </Button>
           </form>
           {!state.ok && state.error && (
-            <p className="mt-2 text-sm text-red-600" role="alert">
+            <p className="mt-2 text-sm text-destructive" role="alert">
               {state.error}
             </p>
           )}
@@ -146,7 +146,7 @@ export function CategoriesManager({ categories }: { categories: CategoryRow[] })
       </Card>
 
       {error && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
+        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
           {error}
         </p>
       )}

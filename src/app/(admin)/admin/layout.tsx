@@ -14,14 +14,14 @@ const NAV_ITEMS = [
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen">
-      <aside className="w-56 shrink-0 border-r bg-gray-50 p-4">
+      <aside className="w-56 shrink-0 border-r bg-card p-4">
         <div className="mb-6 text-lg font-semibold">Admin</div>
         <nav className="space-y-1">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="block rounded px-3 py-2 text-sm hover:bg-gray-200"
+              className="block rounded px-3 py-2 text-sm hover:bg-muted"
             >
               {item.label}
             </Link>

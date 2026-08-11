@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatRupees, formatSlotDate, formatSlotType } from '@/lib/format';
+import { OrderTimeline } from '@/components/shop/order-timeline';
 
 interface OrderItem {
   id: string;
@@ -75,7 +76,7 @@ function ConfirmPanel({ orderId }: { orderId: string }) {
   }
 
   return (
-    <Card className="border-amber-300 bg-amber-50/50">
+    <Card className="border-gold/40 bg-gold/5">
       <CardHeader>
         <CardTitle>Confirm your order</CardTitle>
       </CardHeader>
@@ -104,7 +105,7 @@ function ConfirmPanel({ orderId }: { orderId: string }) {
           </Button>
         </form>
         {error && (
-          <p className="mt-2 text-sm text-red-600" role="alert">
+          <p className="mt-2 text-sm text-destructive" role="alert">
             {error}
           </p>
         )}
@@ -138,19 +139,26 @@ export function OrderDetailView({ order }: { order: OrderDetail }) {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Order {order.orderNumber}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {STATUS_LABELS[order.status] ?? order.status}
-          {order.cancelReason && ` — ${order.cancelReason}`}
-        </p>
+    <div className="animate-om-fade space-y-6">
+      <div className="text-center">
+        <div className="mb-4 inline-flex size-16 items-center justify-center rounded-full bg-[#20392d] text-[32px] text-gold">
+          {order.status === 'CANCELLED' || order.status === 'FAILED' ? '×' : '✓'}
+        </div>
+        <h1 className="text-[34px]">{STATUS_LABELS[order.status] ?? order.status}</h1>
+        {order.cancelReason && (
+          <p className="mt-2 text-base text-[#a9b7ac]">{order.cancelReason}</p>
+        )}
+        <div className="mt-3.5 inline-block rounded-full border border-[#294c3b] bg-[#182e24] px-4.5 py-2 text-sm font-semibold tracking-[0.04em]">
+          {order.orderNumber}
+        </div>
       </div>
 
       {order.status === 'PENDING_OTP' && <ConfirmPanel orderId={order.id} />}
 
+      <OrderTimeline status={order.status} />
+
       {order.paymentMethod === 'ONLINE' && order.paymentStatus === 'UNPAID' && (
-        <Card className="border-amber-300 bg-amber-50/50">
+        <Card className="border-gold/40 bg-gold/5">
           <CardHeader>
             <CardTitle>Waiting for payment</CardTitle>
           </CardHeader>
@@ -170,7 +178,7 @@ export function OrderDetailView({ order }: { order: OrderDetail }) {
       )}
 
       {order.paymentMethod === 'ONLINE' && order.paymentStatus === 'FAILED' && (
-        <Card className="border-red-300 bg-red-50/50">
+        <Card className="border-destructive/40 bg-destructive/5">
           <CardHeader>
             <CardTitle>Payment did not go through</CardTitle>
           </CardHeader>
@@ -182,7 +190,7 @@ export function OrderDetailView({ order }: { order: OrderDetail }) {
       )}
 
       {order.paymentStatus === 'PAID' && (
-        <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">Paid in full.</p>
+        <p className="rounded-md bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">Paid in full.</p>
       )}
 
       <Card>
@@ -251,7 +259,7 @@ export function OrderDetailView({ order }: { order: OrderDetail }) {
       </Card>
 
       {error && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
+        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
           {error}
         </p>
       )}

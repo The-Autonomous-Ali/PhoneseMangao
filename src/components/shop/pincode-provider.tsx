@@ -91,7 +91,7 @@ function GateForm({ onConfirmed }: { onConfirmed: (value: StoredPincode) => void
         />
       </div>
       {error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {error}
         </p>
       )}

@@ -40,11 +40,11 @@ export function EditProductForm({ productId, categories, defaults }: Props) {
           />
 
           {!state.ok && state.error && (
-            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600" role="alert">
+            <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
               {state.error}
             </p>
           )}
-          {state.ok && <p className="text-sm text-green-700">Saved.</p>}
+          {state.ok && <p className="text-sm text-emerald-300">Saved.</p>}
 
           <Button type="submit" disabled={pending}>
             {pending ? 'Saving...' : 'Save changes'}
