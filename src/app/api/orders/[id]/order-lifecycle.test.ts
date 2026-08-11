@@ -4,6 +4,8 @@ import { NextRequest } from 'next/server';
 const tx = {
   order: { update: vi.fn() },
   orderEvent: { create: vi.fn() },
+  orderItem: { findMany: vi.fn() },
+  variant: { updateMany: vi.fn() },
 };
 
 vi.mock('@/lib/db', () => ({
@@ -51,6 +53,8 @@ function buildRequest(body: unknown = {}) {
 const params = { params: Promise.resolve({ id: 'order_1' }) };
 
 beforeEach(() => {
+  tx.orderItem.findMany.mockReset().mockResolvedValue([{ variantId: 'v1', quantity: 2 }]);
+  tx.variant.updateMany.mockReset().mockResolvedValue({ count: 1 });
   vi.mocked(getSession).mockResolvedValue({ userId: 'user_1', role: 'CUSTOMER' });
   vi.mocked(db.order.findFirst).mockReset().mockResolvedValue(ORDER as never);
   vi.mocked(db.user.findUnique)
@@ -88,6 +92,25 @@ describe('POST /api/orders/:id/verify-otp', () => {
     expect(tx.orderEvent.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ status: 'CONFIRMED' }),
     });
+  });
+
+  it('takes the stock down, in the same transaction as the confirmation', async () => {
+    // A cash order used to reach CONFIRMED without ever reducing stock, so ten
+    // of them all passed the same availability check and the shop oversold.
+    await verifyOrderOtp(buildRequest({ code: '123456' }), params);
+
+    expect(tx.variant.updateMany).toHaveBeenCalledWith({
+      where: { id: 'v1', stockQty: { not: null } },
+      data: { stockQty: { decrement: 2 } },
+    });
+  });
+
+  it('does not touch stock when the code is wrong', async () => {
+    vi.mocked(consumeOtp).mockResolvedValue({ ok: false, reason: 'INCORRECT' });
+
+    await verifyOrderOtp(buildRequest({ code: '000000' }), params);
+
+    expect(tx.variant.updateMany).not.toHaveBeenCalled();
   });
 
   it('scopes the code to COD_CONFIRM, so a login code cannot confirm an order', async () => {
@@ -187,4 +210,28 @@ describe('POST /api/orders/:id/cancel', () => {
       data: expect.objectContaining({ cancelReason: 'Ordered by mistake' }),
     });
   });
+
+  it('puts the stock back when cancelling a confirmed order', async () => {
+    vi.mocked(db.order.findFirst).mockResolvedValue({ ...ORDER, status: 'CONFIRMED' } as never);
+
+    await cancelOrder(buildRequest(), params);
+
+    expect(tx.variant.updateMany).toHaveBeenCalledWith({
+      where: { id: 'v1', stockQty: { not: null } },
+      data: { stockQty: { increment: 2 } },
+    });
+  });
+
+  it.each([['PENDING_OTP'], ['PENDING']] as const)(
+    'invents no stock when cancelling from %s',
+    async (status) => {
+      // These never took any. Giving it back would create inventory the shop
+      // does not have, and it would find out by overselling.
+      vi.mocked(db.order.findFirst).mockResolvedValue({ ...ORDER, status } as never);
+
+      await cancelOrder(buildRequest(), params);
+
+      expect(tx.variant.updateMany).not.toHaveBeenCalled();
+    }
+  );
 });

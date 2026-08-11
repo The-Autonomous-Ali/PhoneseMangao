@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { withDbRetry } from '@/lib/db-retry';
 import { getSession } from '@/lib/auth';
 import { releaseSlot } from '@/lib/slots';
+import { returnStock, hasTakenStock } from '@/lib/stock';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,6 +77,11 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       // Same transaction as the cancellation, so the van can never keep a place
       // reserved for an order that no longer exists.
       await releaseSlot(order.slotId, tx);
+
+      // A customer may cancel from CONFIRMED, by which point the stock has come
+      // down. The two earlier statuses never took any, and giving stock back
+      // for those would invent inventory out of nothing.
+      if (hasTakenStock(order.status)) await returnStock(id, tx);
     })
   );
 

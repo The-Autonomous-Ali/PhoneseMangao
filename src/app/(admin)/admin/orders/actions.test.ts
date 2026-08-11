@@ -2,8 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const tx = {
   order: { updateMany: vi.fn(), update: vi.fn() },
-  orderItem: { update: vi.fn() },
+  orderItem: { update: vi.fn(), findMany: vi.fn() },
   orderEvent: { create: vi.fn() },
+  variant: { updateMany: vi.fn() },
 };
 
 vi.mock('@/lib/db', () => ({
@@ -60,6 +61,8 @@ beforeEach(() => {
   vi.mocked(notifyOrderConfirmed).mockReset().mockResolvedValue(undefined);
   vi.mocked(db.order.findUnique).mockReset();
   tx.order.updateMany.mockReset().mockResolvedValue({ count: 1 });
+  tx.orderItem.findMany.mockReset().mockResolvedValue([{ variantId: 'v1', quantity: 2 }]);
+  tx.variant.updateMany.mockReset().mockResolvedValue({ count: 1 });
   tx.order.update.mockReset();
   tx.orderItem.update.mockReset();
   tx.orderEvent.create.mockReset();
@@ -115,6 +118,23 @@ describe('advanceOrderStatus', () => {
     expect(notifyOrderConfirmed).toHaveBeenCalledWith('o_1');
   });
 
+  it('takes the stock down when confirming', async () => {
+    await advanceOrderStatus('o_1', OrderStatus.PENDING);
+
+    expect(tx.variant.updateMany).toHaveBeenCalledWith({
+      where: { id: 'v1', stockQty: { not: null } },
+      data: { stockQty: { decrement: 2 } },
+    });
+  });
+
+  it('does not take it again on later steps', async () => {
+    // Stock comes down once, at confirmation. Taking it again at Packed would
+    // consume the same goods twice.
+    await advanceOrderStatus('o_1', OrderStatus.CONFIRMED);
+
+    expect(tx.variant.updateMany).not.toHaveBeenCalled();
+  });
+
   it('stays quiet on every other step', async () => {
     // The owner does not need a message when he himself clicks Packed.
     await advanceOrderStatus('o_1', OrderStatus.CONFIRMED);
@@ -164,6 +184,29 @@ describe('cancelOrder', () => {
         note: 'Out of stock',
       },
     });
+  });
+
+  it('puts the stock back when cancelling a confirmed order', async () => {
+    vi.mocked(db.order.findUnique).mockResolvedValue(
+      orderRow({ status: OrderStatus.CONFIRMED }) as never
+    );
+
+    await cancelOrder('o_1', 'Out of stock');
+
+    expect(tx.variant.updateMany).toHaveBeenCalledWith({
+      where: { id: 'v1', stockQty: { not: null } },
+      data: { stockQty: { increment: 2 } },
+    });
+  });
+
+  it('invents no stock when cancelling an order that never took any', async () => {
+    vi.mocked(db.order.findUnique).mockResolvedValue(
+      orderRow({ status: OrderStatus.PENDING_OTP }) as never
+    );
+
+    await cancelOrder('o_1', 'Never confirmed');
+
+    expect(tx.variant.updateMany).not.toHaveBeenCalled();
   });
 
   it('will not cancel a delivered order', async () => {

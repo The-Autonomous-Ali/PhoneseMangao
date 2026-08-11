@@ -6,6 +6,7 @@ import { withDbRetry } from '@/lib/db-retry';
 import { getSession } from '@/lib/auth';
 import { consumeOtp } from '@/lib/otp';
 import { notifyOrderConfirmed } from '@/lib/notify-order';
+import { takeStock } from '@/lib/stock';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,6 +75,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       await tx.orderEvent.create({
         data: { orderId: id, status: OrderStatus.CONFIRMED, note: 'Confirmed by OTP' },
       });
+      // Same moment the online path takes it. Without this a cash order never
+      // reduced stock at any point in its life, and the shop oversold.
+      await takeStock(id, tx);
       return row;
     })
   );

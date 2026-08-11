@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { withDbRetry } from '@/lib/db-retry';
 import { verifyWebhookSignature } from '@/lib/razorpay';
 import { notifyOrderConfirmed } from '@/lib/notify-order';
+import { takeStock } from '@/lib/stock';
 
 export const dynamic = 'force-dynamic';
 
@@ -92,19 +93,11 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        // Stock comes down when the money arrives, not when the basket is
-        // filled — an abandoned checkout must not consume stock. Only tracked
-        // variants have a count; loose produce carries null and is skipped.
-        const items = await tx.orderItem.findMany({
-          where: { orderId: order.id },
-          select: { variantId: true, quantity: true },
-        });
-        for (const item of items) {
-          await tx.variant.updateMany({
-            where: { id: item.variantId, stockQty: { not: null } },
-            data: { stockQty: { decrement: item.quantity } },
-          });
-        }
+        // Stock comes down at confirmation, not when the basket is filled — an
+        // abandoned checkout must not consume stock. Shared with the cash path,
+        // which confirms by OTP rather than by payment but takes stock at the
+        // same point in an order's life.
+        await takeStock(order.id, tx);
       })
     );
 

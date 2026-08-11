@@ -11,6 +11,7 @@ import { toActionError, type ActionResult } from '@/lib/actions';
 import { nextStatus, canCancel } from '@/lib/admin/order-status';
 import { settleLines, finalTotalFor, type SettleableLine } from '@/lib/admin/settlement';
 import { notifyOrderConfirmed } from '@/lib/notify-order';
+import { takeStock, returnStock, hasTakenStock } from '@/lib/stock';
 
 /** Shown whenever a conditional write matches nothing. */
 const LOST_RACE = 'This order was already updated. Refresh to see where it is.';
@@ -57,6 +58,8 @@ export async function advanceOrderStatus(
         await tx.orderEvent.create({
           data: { orderId, status: to, actorId: admin.userId, note: null },
         });
+        // Confirmation is when stock comes down, whichever route reaches it.
+        if (to === OrderStatus.CONFIRMED) await takeStock(orderId, tx);
         return true;
       })
     );
@@ -110,6 +113,11 @@ export async function cancelOrder(orderId: string, reason: string): Promise<Acti
           data: { orderId, status: OrderStatus.CANCELLED, actorId: admin.userId, note },
         });
         await releaseSlot(order.slotId, tx);
+        // Checked against the status being cancelled *from*. By now the row
+        // says CANCELLED, which tells you nothing about whether stock was ever
+        // taken — and returning it for an order that never took any would
+        // invent inventory the shop does not have.
+        if (hasTakenStock(order.status)) await returnStock(orderId, tx);
         return true;
       })
     );
