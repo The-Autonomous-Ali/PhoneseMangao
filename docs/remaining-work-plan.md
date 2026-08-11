@@ -1,15 +1,49 @@
 # Remaining work
 
-**Updated:** 2026-08-11 · **Branch:** `phase1.5-hardening` · 656 tests green
+**Updated:** 2026-08-11 · **Branch:** `phase1.5-hardening` · 709 tests green
 
-**The backend is feature-complete.** A customer can browse, fill a basket, check
-out and pay — cash with an OTP confirmation, or online once payments are
-switched on. The owner can run the catalog, work orders through to delivered,
-settle weights at the door, configure the shop, and gets told when an order
-arrives.
+**The backend is feature-complete and the storefront now carries the client's
+design.** A customer can browse, search, fill a basket, check out and pay — cash
+with an OTP confirmation, or online once payments are switched on. The owner can
+run the catalog, work orders through to delivered, settle weights at the door,
+configure the shop, and gets told when an order arrives.
 
-**No backend phase remains.** What is left is verification, CI, and the items
-only the owner can do — listed further down.
+**No feature phase remains.** What is left is the items only the owner can
+supply, a handful of small code tasks, and a proper look at the site on a phone.
+
+---
+
+## Where the effort actually stands
+
+| Area | State |
+|---|---|
+| Backend features | **done** — phases 1 to 6 |
+| Storefront design | **done** — every screen in the mockup, plus search |
+| Admin screens | **done** — 7 screens, all authorised and tested |
+| CI | **done** — lint, types, tests and build on every push |
+| End-to-end verified | **done** — one real order, placed to settled |
+| Photographs | **not started** — client to supply |
+| External accounts | **not started** — Meta, Razorpay, Cloudinary |
+| Small code debts | 4 items, listed below |
+| Deployment | not started |
+
+The honest summary: **the software is close to finished; the launch is not.**
+Nearly everything outstanding needs an account, a credential or a photograph
+that only the shop owner can provide, and none of it can be worked around.
+
+### What was done on 11 August
+
+Phase 6C (owner alerts, dashboard), 5 km radius delivery, the CI workflow, the
+end-to-end pass and its three findings, the whole storefront redesign, and the
+WhatsApp order handover. Fifty-one commits.
+
+Four faults were found by running the thing rather than by testing it, and
+none of them could have been caught by a unit test:
+
+- a cash order never reduced stock, so the shop could oversell
+- no cancel path returned stock, so a paid-then-cancelled order leaked it
+- headings were not rendering in the display face at all
+- a dropped database connection became a 500 on a page read
 
 ---
 
@@ -97,7 +131,9 @@ The `.superpowers/sdd/…/progress.md` this once pointed at no longer exists —
 this list is now the only record.
 
 - **Task 5** — migrate the auth routes onto the `handleRoute` wrapper that
-  already exists in `src/lib/api/handler.ts`
+  already exists in `src/lib/api/handler.ts`. Also worth folding in: the Google
+  sign-in button on `/login` returns 500 when `GOOGLE_CLIENT_ID` is unset,
+  rather than being hidden
 - **Task 6** — error boundaries
 - **Task 7** — admin phone from config. `prisma/seed.ts` still carries
   `TODO: replace with the real admin phone number before go-live` and a
