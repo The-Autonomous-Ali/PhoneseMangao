@@ -1,19 +1,24 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Hanken_Grotesk, Marcellus } from 'next/font/google';
+import './globals.css';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+/** Body text. The design's working font throughout. */
+const hankenGrotesk = Hanken_Grotesk({
+  variable: '--font-hanken',
+  subsets: ['latin'],
+  display: 'swap',
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+/** Display face, for headings and the wordmark. */
+const marcellus = Marcellus({
+  variable: '--font-marcellus',
+  subsets: ['latin'],
+  weight: '400',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'Grocery Store',
+  title: 'Phone Se Mangao — fresh, daily, at your door',
   description: 'Fresh fruits, vegetables and grocery, delivered on your schedule.',
 };
 
@@ -24,9 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${hankenGrotesk.variable} ${marcellus.variable} antialiased`}>
         {children}
       </body>
     </html>

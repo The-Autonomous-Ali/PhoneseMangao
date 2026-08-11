@@ -50,3 +50,9 @@ next-env.d.ts
 
 # Database dumps written by deploy/backup.sh
 /backups/
+
+# Extraction artifacts from the design bundle, regenerated on demand
+*.tmp.html
+*.tmp.css
+*.tmp.js
+*.tmp.ts
