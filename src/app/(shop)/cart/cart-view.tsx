@@ -8,6 +8,8 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { useCart } from '@/components/shop/cart-provider';
 import { usePincode } from '@/components/shop/pincode-provider';
 import { formatRupees } from '@/lib/format';
+import { whatsappLink, cartOrderMessage } from '@/lib/whatsapp-order';
+import { SHOP_NAME } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 interface PricedLine {
@@ -39,10 +41,23 @@ interface ValidatedCart {
   shopOpen: boolean;
 }
 
-export function CartView() {
+export function CartView({ whatsappNumber }: { whatsappNumber: string }) {
   const { items, setQuantity, remove, hydrated } = useCart();
   const { pincode, change } = usePincode();
   const [priced, setPriced] = useState<ValidatedCart | null>(null);
+  // Built from the priced lines rather than the raw basket, so the message
+  // carries the prices the shop would actually charge.
+  const whatsappOrderUrl = priced
+    ? whatsappLink(
+        whatsappNumber,
+        cartOrderMessage({
+          shopName: SHOP_NAME,
+          lines: priced.items,
+          total: priced.grandTotal,
+          pincode,
+        })
+      )
+    : null;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -230,6 +245,21 @@ export function CartView() {
         >
           Checkout
         </Link>
+
+        {/* The other way out, for the customer who would rather finish the
+            order by talking to somebody. Their basket travels with them, so
+            the shop is not asking which size they meant. Deliberately below
+            checkout and quieter — it is the alternative, not the default. */}
+        {whatsappOrderUrl && (
+          <a
+            href={whatsappOrderUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block pt-1 text-center text-sm font-semibold text-gold hover:underline"
+          >
+            Or send this order on WhatsApp →
+          </a>
+        )}
       </div>
     </div>
   );

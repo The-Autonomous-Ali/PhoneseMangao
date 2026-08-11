@@ -3,8 +3,10 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getProductBySlug } from '@/lib/shop-queries';
+import { getShopSettings } from '@/lib/settings';
 import { AddToCart } from '@/components/shop/add-to-cart';
 import { formatRupees } from '@/lib/format';
+import { whatsappLink, productEnquiryMessage } from '@/lib/whatsapp-order';
 import { SHOP_NAME } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic';
@@ -30,8 +32,22 @@ export async function generateMetadata({
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
+  const [product, settings] = await Promise.all([getProductBySlug(slug), getShopSettings()]);
   if (!product) notFound();
+
+  // The cheapest buyable size, matching what the card advertises.
+  const headline = product.variants.find((v) => v.isAvailable) ?? product.variants[0];
+  const whatsapp = headline
+    ? whatsappLink(
+        settings.whatsappNumber,
+        productEnquiryMessage({
+          shopName: SHOP_NAME,
+          productName: product.name,
+          variantLabel: headline.label,
+          price: headline.price,
+        })
+      )
+    : null;
 
   return (
     <div className="space-y-6">
@@ -117,6 +133,20 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             <span>✓ Hand-picked</span>
             <span>✓ Return if not fresh</span>
           </div>
+
+          {/* Carries the item into the chat already written out, so the shop is
+              not asking "which size?" before it can help. Hidden entirely when
+              no number is configured. */}
+          {whatsapp && (
+            <a
+              href={whatsapp}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-block text-sm font-semibold text-gold hover:underline"
+            >
+              Ask about this item on WhatsApp →
+            </a>
+          )}
         </div>
       </div>
     </div>

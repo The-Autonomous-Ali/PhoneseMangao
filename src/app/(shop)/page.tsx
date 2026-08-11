@@ -5,6 +5,7 @@ import { getActiveCategories, getStorefrontProducts } from '@/lib/shop-queries';
 import { getShopSettings, type ShopSettings } from '@/lib/settings';
 import { ProductCard } from '@/components/shop/product-card';
 import { formatRupees } from '@/lib/format';
+import { whatsappLink } from '@/lib/whatsapp-order';
 import { SHOP_NAME, SHOP_TAGLINE } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic';
@@ -79,7 +80,10 @@ export default async function HomePage() {
     getShopSettings(),
   ]);
 
-  const whatsapp = settings.whatsappNumber.replace(/\D/g, '');
+  const whatsapp = whatsappLink(
+    settings.whatsappNumber,
+    `Hi! I'd like to order from ${SHOP_NAME}:`
+  );
 
   if (categories.length === 0) {
     return (
@@ -130,7 +134,7 @@ export default async function HomePage() {
                 ignoring you. */}
             {whatsapp && (
               <a
-                href={`https://wa.me/${whatsapp}`}
+                href={whatsapp}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rounded-full border border-[#305640] bg-[#182e24] px-6 py-3.5 text-[15px] font-semibold text-foreground transition-colors hover:border-gold"
