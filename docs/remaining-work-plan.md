@@ -109,9 +109,9 @@ this list is now the only record.
   across 6A, 6B and the radius work. **It has not yet run** — the branch has not
   been pushed since it was added, so the first run is still unobserved
 - **Task 9** — client details checklist
-- **Task 10** — **end-to-end verification pass. Nothing has been run against a
-  live database.** Every phase from 6A on is proven by tests, types, lint and a
-  production build, and none of those is a real order reaching a door
+- ~~**Task 10** — **end-to-end verification pass**~~ **Done.** A real order was
+  driven from OTP login to settled delivery against the live database. Three
+  findings came out of it — see *What the end-to-end pass found* below
 
 ### 5. Phase 7 — polish · *after launch*
 
@@ -155,6 +155,66 @@ mobile audit.
 
 ---
 
+## What the end-to-end pass found
+
+One order — `PM260811-3EKT` — was driven the whole way on 2026-08-11: OTP
+login, address, cart, COD checkout, OTP confirmation, the status walk, weight
+settlement, delivery. It all worked. The 5 kg bag of onions at ₹160 settled at
+4.7 kg for ₹150.40, which is ₹32/kg, and `finalTotal` came to ₹230.40 against a
+₹240.00 estimate. The dashboard then reported ₹230.40 collected, all cash.
+
+Worth knowing: settlement writes **strings into `Decimal` columns**, and every
+unit test mocks Prisma, so that had never actually been exercised. It works.
+That was the single largest untested assumption in the codebase.
+
+Three things came out of it, none of which any test would have caught.
+
+### 1. A cash order never reduces stock · *the real one*
+
+`stockQty` is decremented in exactly one place — the Razorpay webhook
+(`webhooks/razorpay/route.ts:105`), on `payment.captured`. A COD order
+therefore never touches it, at any point in its life, including delivery.
+
+The comment there reads "stock comes down when the money arrives, not when the
+basket is filled", which is right for online payment. For cash the money
+arrives at the door, and nothing decrements stock then either. Ten COD orders
+for the same tracked item all pass `priceCart`'s stock check against the same
+untouched count, and the shop oversells.
+
+It does not bite loose produce, which carries `stockQty: null` and is not
+tracked. It bites the packed goods that are.
+
+**Not fixed, because where the decrement belongs is a decision.** Reserving at
+CONFIRMED prevents overselling but consumes stock on an order that may still be
+cancelled; taking it at DELIVERED is accurate but too late to prevent anything.
+
+### 2. A dropped database connection is a 500 on a read
+
+`/orders` returned 500 once during the sweep, then 200 on every retry.
+The cause was `P1017 — server has closed the connection`, Neon dropping an idle
+connection, and `withDbRetry` not retrying it.
+
+That exclusion is deliberate and documented (`db-retry.ts:8-11`): the server can
+close a connection *after* a statement was sent, so a retry could duplicate a
+write. Correct for writes. On a read there is no write to duplicate, so the
+customer gets a 500 where a retry would have been provably safe.
+
+Worth narrowing — retry P1017 for reads — but it is a change to the one module
+everything else depends on, so it deserves its own thought.
+
+### 3. Customers who sign in by OTP have no name
+
+The alert read `New order PM260811-3EKT — Customer +919876500001`. `User.name`
+is only ever set by Google sign-in, so an OTP customer has none, and the address
+snapshot carries `name: null`.
+
+`notify-order.ts` falls back to `'Customer'`. The picking slip and the orders
+list do not, so a packing slip prints a blank where the name should be — which
+is the sheet the driver carries to the door. Either add the same fallback in
+both, or ask for a name at checkout.
+
+---
+
 ## Known state and small debts
 
 - Local `.env` holds a placeholder `CRON_SECRET` and fake Razorpay keys, added
@@ -163,10 +223,15 @@ mobile audit.
 - The dev database's six test orders were deleted when `OrderItem.unitValue`
   was added, and the slot counters reset with them. A "Home" address on the
   seeded admin and one variant at `stockQty: 48` remain.
-- **Neither 6A nor 6B has had a live end-to-end run.** Both are covered by
-  tests, `tsc`, lint and a production build, but no real order has been walked
-  from placed to settled, and no setting has been saved through the screen
-  against the database. Do that before trusting either in front of the owner.
+- **The end-to-end pass left one delivered test order in the dev database**
+  (`PM260811-3EKT`) and one test customer (`+919876500001`). Harmless, and
+  useful as evidence, but clear both before any demo — a delivered order counts
+  toward the dashboard's revenue figure.
+- **The admin screens were verified as rendering, not as clicking.** Every
+  admin page returns 200 with a session and 307 without one, and the query layer
+  was run against real data. The Server Actions behind the buttons were
+  exercised by replaying their database writes, not by pressing the buttons —
+  the browser extension was not connected. The forms themselves are unclicked.
 - **Replace the seeded pincodes through `/admin/pincodes` now**, rather than in
   the database. The screen exists for it.
 - `grocery-ecommerce-system-design.md` in the repo root is an untracked
