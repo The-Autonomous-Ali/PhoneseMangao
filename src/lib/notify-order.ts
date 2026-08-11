@@ -2,7 +2,7 @@ import { PaymentStatus } from '@prisma/client';
 import { db } from '@/lib/db';
 import { withReadRetry } from '@/lib/db-retry';
 import { sendOwnerAlert } from '@/lib/services/notify';
-import { formatRupees, formatSlotDate, formatSlotType } from '@/lib/format';
+import { formatRupees, formatSlotDate, formatSlotType, recipientName } from '@/lib/format';
 
 /**
  * Tells the owner an order has been confirmed.
@@ -41,7 +41,7 @@ export async function notifyOrderConfirmed(orderId: string): Promise<void> {
 
     await sendOwnerAlert({
       orderNumber: order.orderNumber,
-      customerName: address.name ?? 'Customer',
+      customerName: recipientName(address.name),
       customerPhone: address.phone ?? '',
       slot: `${formatSlotDate(order.slot.date.toISOString())} ${formatSlotType(order.slot.slotType)}`,
       summary: `${count} item${count === 1 ? '' : 's'} · ${payment}`,

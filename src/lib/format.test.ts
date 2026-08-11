@@ -1,4 +1,18 @@
 import { describe, it, expect } from 'vitest';
+
+describe('recipientName', () => {
+  it('uses the name when there is one', async () => {
+    const { recipientName } = await import('./format');
+    expect(recipientName('Ramesh')).toBe('Ramesh');
+  });
+
+  it.each([[null], [undefined], [''], ['   ']])('falls back for %s', async (value) => {
+    // Only Google sign-in ever set a name, so every customer who arrived by
+    // phone code has none. A blank on the driver's slip reads as a fault.
+    const { recipientName } = await import('./format');
+    expect(recipientName(value)).toBe('Customer');
+  });
+});
 import { formatRupees } from './format';
 
 describe('formatRupees', () => {

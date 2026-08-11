@@ -326,6 +326,32 @@ describe('POST /api/orders — placing the order', () => {
     });
   });
 
+  it('snapshots the address recipient rather than the account holder', async () => {
+    // The address is the more specific answer to "who opens the door" — an
+    // order sent to a parent's house is received by the parent.
+    vi.mocked(db.address.findFirst).mockResolvedValue({
+      ...ADDRESS,
+      recipientName: 'Sita',
+    } as never);
+
+    await placeOrder(buildRequest(VALID_BODY));
+
+    const { data } = tx.order.create.mock.calls[0][0];
+    expect(data.deliveryAddress.name).toBe('Sita');
+  });
+
+  it('falls back to the account holder when the address names nobody', async () => {
+    vi.mocked(db.address.findFirst).mockResolvedValue({
+      ...ADDRESS,
+      recipientName: null,
+    } as never);
+
+    await placeOrder(buildRequest(VALID_BODY));
+
+    const { data } = tx.order.create.mock.calls[0][0];
+    expect(data.deliveryAddress.name).toBe('A Customer');
+  });
+
   it('denormalises product names onto the order lines', async () => {
     await placeOrder(buildRequest(VALID_BODY));
 

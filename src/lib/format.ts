@@ -14,6 +14,20 @@ export function formatRupees(value: string): string {
 }
 
 /**
+ * Who to ask for at the door, for orders that carry no name.
+ *
+ * Only Google sign-in ever set a name before addresses could hold one, so every
+ * customer who arrived by phone code has none — and a packing slip that reads
+ * "PM260811-3EKT ·  · 98765 43210" looks like a fault in the printer rather
+ * than an absent field. One helper rather than a `?? 'Customer'` at each of the
+ * three call sites, so the slip, the orders list and the owner's alert cannot
+ * drift into saying different things about the same person.
+ */
+export function recipientName(name: string | null | undefined): string {
+  return name?.trim() || 'Customer';
+}
+
+/**
  * The delivery windows behind each slot type.
  *
  * The enum name is a label, not a time — the customer needs to know when to be

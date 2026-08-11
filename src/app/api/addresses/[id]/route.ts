@@ -64,6 +64,7 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
         where: { id },
         data: {
           label: input.label ?? null,
+          recipientName: input.recipientName ?? null,
           line1: input.line1,
           line2: input.line2 ?? null,
           landmark: input.landmark ?? null,

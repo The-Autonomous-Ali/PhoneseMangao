@@ -1,5 +1,5 @@
 import type { SlotPickingList } from '@/lib/admin/order-queries';
-import { formatRupees, formatSlotDate, formatSlotType } from '@/lib/format';
+import { formatRupees, formatSlotDate, formatSlotType, recipientName } from '@/lib/format';
 
 /**
  * One print job in two parts.
@@ -39,7 +39,7 @@ export function PickingSheet({ list }: { list: SlotPickingList }) {
       {list.orders.map((slip) => (
         <section key={slip.orderNumber} className="mb-6 border-t pt-3 break-before-page">
           <h2 className="font-semibold">
-            {slip.orderNumber} · {slip.address.name} · {slip.address.phone}
+            {slip.orderNumber} · {recipientName(slip.address.name)} · {slip.address.phone}
           </h2>
 
           <ul className="my-2">

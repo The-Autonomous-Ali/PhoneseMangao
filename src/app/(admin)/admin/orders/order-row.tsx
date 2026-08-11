@@ -6,7 +6,7 @@ import { OrderStatus } from '@prisma/client';
 import { Button } from '@/components/ui/button';
 import type { AdminOrderRow } from '@/lib/admin/order-queries';
 import { advanceLabel, canCancel, nextStatus } from '@/lib/admin/order-status';
-import { formatRupees, formatSlotDate, formatSlotType } from '@/lib/format';
+import { formatRupees, formatSlotDate, formatSlotType, recipientName } from '@/lib/format';
 import { advanceOrderStatus, cancelOrder } from './actions';
 import { SettleForm } from './settle-form';
 
@@ -94,7 +94,7 @@ export function OrderRow({ order }: { order: AdminOrderRow }) {
 
           <div className="text-sm">
             <h3 className="mb-1 font-medium">Deliver to</h3>
-            <p>{order.address.name}</p>
+            <p>{recipientName(order.address.name)}</p>
             <p>{order.address.phone}</p>
             <p>
               {order.address.line1}

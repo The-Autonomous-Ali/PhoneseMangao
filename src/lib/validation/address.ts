@@ -12,6 +12,10 @@ const optionalLine = (max: number) =>
 
 export const addressSchema = z.object({
   label: optionalLine(30),
+  // Who the driver asks for. Optional because an address saved before this
+  // existed has none, and because insisting on it would put a required field
+  // between a customer and their first order.
+  recipientName: optionalLine(60),
   line1: trimmed(120).min(1, 'Flat, building and street are required'),
   line2: optionalLine(120),
   // Not decoration: the driver reads this. "Opposite the temple" is how

@@ -57,6 +57,7 @@ function AddressForm({ onCreated }: { onCreated: (address: Address) => void }) {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         label: data.get('label'),
+        recipientName: data.get('recipientName'),
         line1: data.get('line1'),
         line2: data.get('line2'),
         landmark: data.get('landmark'),
@@ -77,6 +78,13 @@ function AddressForm({ onCreated }: { onCreated: (address: Address) => void }) {
 
   return (
     <form onSubmit={submit} className="space-y-3">
+      <div className="space-y-2">
+        <Label htmlFor="recipientName">Who should we ask for?</Label>
+        <Input id="recipientName" name="recipientName" placeholder="Your name" maxLength={60} />
+        <p className="text-xs text-muted-foreground">
+          Printed on the packing slip the driver carries. Leave it blank if it is you.
+        </p>
+      </div>
       <div className="space-y-2">
         <Label htmlFor="line1">Flat, building, street</Label>
         <Input id="line1" name="line1" required maxLength={120} />

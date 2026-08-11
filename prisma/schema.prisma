@@ -46,6 +46,10 @@ model Address {
   userId    String
   user      User    @relation(fields: [userId], references: [id])
   label     String?
+  // Who the driver asks for at the door. Held per address rather than per
+  // customer, because the answer differs by address — an order sent to a
+  // parent's house is received by the parent, not by whoever paid for it.
+  recipientName String?
   line1     String
   line2     String?
   landmark  String?

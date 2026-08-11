@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
         data: {
           userId: session.userId,
           label: input.label,
+          recipientName: input.recipientName,
           line1: input.line1,
           line2: input.line2,
           landmark: input.landmark,

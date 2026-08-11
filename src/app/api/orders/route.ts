@@ -180,7 +180,10 @@ export async function POST(request: NextRequest) {
                   city: address.city,
                   pincode: address.pincode,
                   phone: user.phone,
-                  name: user.name,
+                  // The address's own recipient first: it is the more specific
+                  // answer to "who opens the door", and only falls back to the
+                  // account holder when nobody said otherwise.
+                  name: address.recipientName ?? user.name,
                 },
                 status: initialStatus,
                 paymentMethod: input.paymentMethod,
