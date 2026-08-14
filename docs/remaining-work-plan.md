@@ -1,6 +1,6 @@
 # Remaining work
 
-**Updated:** 2026-08-11 · **Branch:** `phase1.5-hardening` · 709 tests green
+**Updated:** 2026-08-14 · **Branch:** `phase1.5-hardening` · 713 tests green
 
 **The backend is feature-complete and the storefront now carries the client's
 design.** A customer can browse, search, fill a basket, check out and pay — cash
@@ -142,8 +142,9 @@ this list is now the only record.
   `.github/workflows/ci.yml` runs lint → typecheck → test → build on every push
   and on PRs into master, on Node 22 to match the Dockerfile. It exists because
   `tsc --noEmit` went red while the suite stayed green four separate times
-  across 6A, 6B and the radius work. **It has not yet run** — the branch has not
-  been pushed since it was added, so the first run is still unobserved
+  across 6A, 6B and the radius work. **Observed and green**: it has now run five
+  times since being added, most recently on the 14 August push, all passing in
+  under 1m40s each
 - **Task 9** — client details checklist
 - ~~**Task 10** — **end-to-end verification pass**~~ **Done.** A real order was
   driven from OTP login to settled delivery against the live database. Three
@@ -151,8 +152,10 @@ this list is now the only record.
 
 ### 5. Phase 7 — polish · *after launch*
 
-SEO metadata, OG images, WhatsApp float button, customer order-tracking page,
-mobile audit.
+~~WhatsApp float button~~ **Done** (`cf87a02`, 14 August) — a call/WhatsApp
+button now floats on every storefront page, verified in a live browser.
+
+Still open: SEO metadata, OG images, customer order-tracking page, mobile audit.
 
 ---
 
