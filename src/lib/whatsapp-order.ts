@@ -72,6 +72,25 @@ export function cartOrderMessage(input: {
   return parts.join('\n');
 }
 
+/**
+ * The message for the floating call/WhatsApp button, present on every page.
+ *
+ * Unlike `cartOrderMessage`, this may run with no basket at all — someone
+ * browsing the home page has never added anything. `null` and an empty basket
+ * both fall back to a plain greeting rather than "I'd like to order from
+ * Shop:" with nothing under it, which would read as a mistake rather than a
+ * question.
+ */
+export function floatingButtonMessage(input: {
+  shopName: string;
+  cart: { lines: OrderLine[]; total: string; pincode?: string | null } | null;
+}): string {
+  if (!input.cart || input.cart.lines.length === 0) {
+    return `Hi! I have a question about ${input.shopName}.`;
+  }
+  return cartOrderMessage({ shopName: input.shopName, ...input.cart });
+}
+
 /** The message for someone asking about one item from its own page. */
 export function productEnquiryMessage(input: {
   shopName: string;

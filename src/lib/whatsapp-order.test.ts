@@ -3,6 +3,7 @@ import {
   whatsappLink,
   cartOrderMessage,
   productEnquiryMessage,
+  floatingButtonMessage,
   type OrderLine,
 } from './whatsapp-order';
 
@@ -104,6 +105,47 @@ describe('cartOrderMessage', () => {
 
     expect(message).toContain("I'd like to order from Shop");
     expect(message).not.toContain('Total:');
+  });
+});
+
+describe('floatingButtonMessage', () => {
+  it('summarises the basket when it has items', () => {
+    const message = floatingButtonMessage({
+      shopName: 'Phone Se Mangao',
+      cart: { lines: LINES, total: '125.00' },
+    });
+
+    expect(message).toContain("I'd like to order from Phone Se Mangao");
+    expect(message).toContain('Onions 1 kg × 2 — ₹70');
+    expect(message).toContain('Total: ₹125');
+  });
+
+  it('carries the delivery area through when one is known', () => {
+    const message = floatingButtonMessage({
+      shopName: 'Shop',
+      cart: { lines: LINES, total: '125.00', pincode: '400069' },
+    });
+
+    expect(message).toContain('Deliver to: 400069');
+  });
+
+  it('falls back to a plain greeting when there is no basket at all', () => {
+    // Someone browsing the home page has never added anything — the basket
+    // being null, not just empty, is the ordinary state of a first visit.
+    const message = floatingButtonMessage({ shopName: 'Shop', cart: null });
+
+    expect(message).toBe('Hi! I have a question about Shop.');
+  });
+
+  it('falls back to a plain greeting rather than an empty order list', () => {
+    // cartOrderMessage would say "I'd like to order from Shop:" with nothing
+    // under it, which reads as a mistake rather than a question.
+    const message = floatingButtonMessage({
+      shopName: 'Shop',
+      cart: { lines: [], total: '0.00' },
+    });
+
+    expect(message).toBe('Hi! I have a question about Shop.');
   });
 });
 

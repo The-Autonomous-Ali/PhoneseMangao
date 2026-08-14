@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { CartProvider } from '@/components/shop/cart-provider';
 import { PincodeProvider } from '@/components/shop/pincode-provider';
 import { SiteHeader } from '@/components/shop/site-header';
+import { CallToOrderButton } from '@/components/shop/call-to-order-button';
 import { SHOP_NAME } from '@/lib/constants';
 
 export default function ShopLayout({ children }: { children: ReactNode }) {
@@ -23,6 +24,7 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
             </div>
           </footer>
         </div>
+        <CallToOrderButton phoneNumber={process.env.NEXT_PUBLIC_WHATSAPP_NUMBER} />
       </PincodeProvider>
     </CartProvider>
   );
